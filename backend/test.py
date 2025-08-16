@@ -1,9 +1,13 @@
+from urllib import response
 from youtube_transcript_api import YouTubeTranscriptApi
 import asyncio
 from huggingface_hub import InferenceClient
 import os
 from dotenv import load_dotenv
 from googleapiclient.discovery import build
+import json
+from azure.ai.translation.text import TextTranslationClient
+from azure.core.credentials import AzureKeyCredential
 
 def main():
     # ytt_api = YouTubeTranscriptApi()
@@ -11,36 +15,26 @@ def main():
     # print(transcript)
     load_dotenv()
 
-    AI_API_KEY = os.getenv("HUGGINGFACE_API_KEY")
-    GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+    key = os.getenv("TRANSLATOR_API_KEY")
+    endpoint = "https://api.cognitive.microsofttranslator.com/"          # e.g., https://<your-resource>.cognitiveservices.azure.com/
+    region = "westus"
 
-    # client = InferenceClient(token=AI_API_KEY)
+    credential = AzureKeyCredential(key)
+    text_translator = TextTranslationClient(credential=credential, region=region)
+    
+    try:
+        input_text = ["This is a test.", "hello darkness"]
+        response = text_translator.translate(
+            body=input_text,
+            to_language=["fr"],          # list of target languages
+        )
+        for idx, translation_result in enumerate(response):
+            print(f"Input: {input_text[idx]}")
+            for t in translation_result.translations:
+                print(f"  Translated to {t.to}: {t.text}")
 
-    # completion = client.chat.completions.create(
-    #     model="deepseek-ai/DeepSeek-R1",
-    #     messages=[
-    #         {
-    #             "role": "user",
-    #             "content": "You're an enthusiastic tech blogger who likes to use emojis. Write a short blog about React"
-    #         }
-    #     ],
-    # )
-
-    # print(completion.choices[0].message)
-
-    youtube = build("youtube", "v3", developerKey=GOOGLE_API_KEY)
-
-    request = youtube.search().list(
-        part="snippet",
-        q="financial education",   # <-- keyword(s)
-        type="video",               # Only videos (no channels/playlists)
-        maxResults=10,              # Max per request (max 50)
-        order="relevance"           # Can be date, rating, viewCount, etc.
-    )
-
-    response = request.execute()
-    for item in response.get("items", []):
-        print(f"Item: {item}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 
 if __name__ == "__main__":
