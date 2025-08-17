@@ -8,34 +8,73 @@ from googleapiclient.discovery import build
 import json
 from azure.ai.translation.text import TextTranslationClient
 from azure.core.credentials import AzureKeyCredential
+from dataclasses import dataclass, field
+from openai import OpenAI
+
+@dataclass
+class TranscriptSnippet:
+    text: str
+    translation: str
+    start: float
+    duration: float
 
 def main():
+    
+    load_dotenv()
     # ytt_api = YouTubeTranscriptApi()
     # transcript = ytt_api.fetch("oLIkRpKLH1Y")
-    # print(transcript)
-    load_dotenv()
+    # input_lines = "\n".join([snippet.text for snippet in transcript.snippets])
+    # print(input_lines)
 
-    key = os.getenv("TRANSLATOR_API_KEY")
-    endpoint = "https://api.cognitive.microsofttranslator.com/"          # e.g., https://<your-resource>.cognitiveservices.azure.com/
-    region = "westus"
+    client = OpenAI(
+        api_key=os.getenv("OPENAI_API_KEY"),
+    )
 
-    credential = AzureKeyCredential(key)
-    text_translator = TextTranslationClient(credential=credential, region=region)
-    
-    try:
-        input_text = ["This is a test.", "hello darkness"]
-        response = text_translator.translate(
-            body=input_text,
-            to_language=["fr"],          # list of target languages
-        )
-        for idx, translation_result in enumerate(response):
-            print(f"Input: {input_text[idx]}")
-            for t in translation_result.translations:
-                print(f"  Translated to {t.to}: {t.text}")
+    storyLines = [
+    "This is me at 19 years old. I was broke,",
+    "struggling in school, but with a dream",
+    "that one day I'll make it big. Today, I",
+    "can travel wherever I want to, dine at",
+    "the finest restaurants, and have the",
+    "freedom to do the things that I'm",
+    "passionate about. This is the story of",
+    "how I went from broke to becoming a",
+    "millionaire in 24 months. It was the",
+    "first quarter of 2019, the second year",
+    "of my school. I was studying information",
+    "technology and struggled with most of my",
+    "modules. Because of my low GPA and lack",
+    "of interest in studying, I knew that I",
+    "couldn't make it to university. That's",
+    # "a change or remain unsuccessful for the",
+    # "rest of my life. Given my interest in",
+    # "entrepreneurship since young, my goal",
+    # "has always been to start a business, one",
+    # "that can make me wealthy and break free",
+    # "from the traditional 9 to5 path. During",
+    # "a bus ride home from school, I thought",
+    # "of an idea that I hoped would",
+    # "revolutionize social media marketing"
+    ]
 
-    except Exception as e:
-        print(f"An error occurred: {e}")
+    input_text = "\n".join(storyLines)
+    # input_text = [f"{i+1}. {line}" for i, line in enumerate(storyLines)]
+    input = f"""
+Translate each line below to Filipino.  
+Rules:  
+- Output must have the exact same number of lines as the input.  
+- Do not merge lines.  
+- Do not add explanations. Only translations.  
 
+{input_text}
+    """
+    response = client.responses.create(
+        model="gpt-4.1-nano",
+        input=input,
+        store=True,
+    )
+
+    print(response.output[0].content[0].text)
 
 if __name__ == "__main__":
     main()
