@@ -6,8 +6,6 @@ import os
 from dotenv import load_dotenv
 from googleapiclient.discovery import build
 import json
-from azure.ai.translation.text import TextTranslationClient
-from azure.core.credentials import AzureKeyCredential
 from dataclasses import dataclass, field
 from openai import OpenAI
 
@@ -18,19 +16,7 @@ class TranscriptSnippet:
     start: float
     duration: float
 
-def main():
-    
-    load_dotenv()
-    # ytt_api = YouTubeTranscriptApi()
-    # transcript = ytt_api.fetch("oLIkRpKLH1Y")
-    # input_lines = "\n".join([snippet.text for snippet in transcript.snippets])
-    # print(input_lines)
-
-    client = OpenAI(
-        api_key=os.getenv("OPENAI_API_KEY"),
-    )
-
-    storyLines = [
+input_list = [
     "This is me at 19 years old. I was broke,",
     "struggling in school, but with a dream",
     "that one day I'll make it big. Today, I",
@@ -46,35 +32,71 @@ def main():
     "modules. Because of my low GPA and lack",
     "of interest in studying, I knew that I",
     "couldn't make it to university. That's",
-    # "a change or remain unsuccessful for the",
-    # "rest of my life. Given my interest in",
-    # "entrepreneurship since young, my goal",
-    # "has always been to start a business, one",
-    # "that can make me wealthy and break free",
-    # "from the traditional 9 to5 path. During",
-    # "a bus ride home from school, I thought",
-    # "of an idea that I hoped would",
-    # "revolutionize social media marketing"
-    ]
+    "a change or remain unsuccessful for the",
+    "rest of my life. Given my interest in",
+    "entrepreneurship since young, my goal",
+    "has always been to start a business, one",
+    "that can make me wealthy and break free",
+    "from the traditional 9 to5 path. During",
+    "a bus ride home from school, I thought",
+    "of an idea that I hoped would",
+    "revolutionize social media marketing"
+]
 
-    input_text = "\n".join(storyLines)
-    # input_text = [f"{i+1}. {line}" for i, line in enumerate(storyLines)]
-    input = f"""
-Translate each line below to Filipino.  
-Rules:  
-- Output must have the exact same number of lines as the input.  
+prompt = f"""
+Translate each input line below to Filipino.  
+ Rules:  
+- Output must have the exact same number of lines as the input.
+- There are no empty output lines.
 - Do not merge lines.  
 - Do not add explanations. Only translations.  
+"""
 
-{input_text}
-    """
-    response = client.responses.create(
-        model="gpt-4.1-nano",
-        input=input,
-        store=True,
+def chunk_list(lst, chunk_size):
+    for i in range(0, len(lst), chunk_size):
+        yield lst[i:i + chunk_size]
+
+def main():
+    
+    load_dotenv()
+    # ytt_api = YouTubeTranscriptApi()
+    # transcript = ytt_api.fetch("oLIkRpKLH1Y")
+    # input_lines = "\n".join([snippet.text for snippet in transcript.snippets])
+    # print(input_lines)
+
+    client = OpenAI(
+        api_key=os.getenv("OPENAI_API_KEY"),
     )
+ 
+    chunks = list(chunk_list(input_list, 15))
 
-    print(response.output[0].content[0].text)
+    # for i, chunk in enumerate(chunks):
+    #     input_lines = "\n".join(chunk)
+    #     print(f"--- chunk {i+1} ---")
+    #     print(input_lines)
+
+    # loop over each chunk and send a request
+    for i, chunk in enumerate(chunks):
+        numbered_chunk = [
+            f"{j + 1}. {line}" for j, line in enumerate(chunk)
+        ]
+        input_lines = "\n".join(numbered_chunk)
+        input = f"""
+{prompt}
+input:
+{input_lines}
+        """
+        
+        response = client.responses.create(
+            model="gpt-4.1-nano",
+            input=input,
+            store=False,
+        )
+        
+        print(f"--- Translation for chunk {i+1} ---")
+        # print(input)
+        # print(response.output_text)
+        print(response.output[0].content[0].text)
 
 if __name__ == "__main__":
     main()
