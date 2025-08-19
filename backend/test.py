@@ -59,44 +59,39 @@ def chunk_list(lst, chunk_size):
 def main():
     
     load_dotenv()
-    # ytt_api = YouTubeTranscriptApi()
-    # transcript = ytt_api.fetch("oLIkRpKLH1Y")
+    ytt_api = YouTubeTranscriptApi()
+    
+    transcript = ytt_api.fetch("oLIkRpKLH1Y")
     # input_lines = "\n".join([snippet.text for snippet in transcript.snippets])
-    # print(input_lines)
+    print(transcript)
 
-    client = OpenAI(
-        api_key=os.getenv("OPENAI_API_KEY"),
-    )
+    # client = OpenAI(
+    #     api_key=os.getenv("OPENAI_API_KEY"),
+    # )
  
-    chunks = list(chunk_list(input_list, 15))
-
-    # for i, chunk in enumerate(chunks):
-    #     input_lines = "\n".join(chunk)
-    #     print(f"--- chunk {i+1} ---")
-    #     print(input_lines)
+    # chunks = list(chunk_list(input_list, 15))
 
     # loop over each chunk and send a request
-    for i, chunk in enumerate(chunks):
-        numbered_chunk = [
-            f"{j + 1}. {line}" for j, line in enumerate(chunk)
-        ]
-        input_lines = "\n".join(numbered_chunk)
-        input = f"""
-{prompt}
-input:
-{input_lines}
-        """
+#     for i, chunk in enumerate(chunks):
+#         numbered_chunk = [
+#             f"{j + 1}. {line}" for j, line in enumerate(chunk)
+#         ]
+#         input_lines = "\n".join(numbered_chunk)
+#         input = f"""
+# {prompt}
+# input:
+# {input_lines}
+#         """
+#         response = client.responses.create(
+#             model="gpt-4.1-nano",
+#             input=input,
+#             store=False,
+#         )
         
-        response = client.responses.create(
-            model="gpt-4.1-nano",
-            input=input,
-            store=False,
-        )
-        
-        print(f"--- Translation for chunk {i+1} ---")
+        # print(f"--- Translation for chunk {i+1} ---")
         # print(input)
         # print(response.output_text)
-        print(response.output[0].content[0].text)
+        # print(response.output[0].content[0].text)
 
 if __name__ == "__main__":
     main()
