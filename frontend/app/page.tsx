@@ -38,14 +38,21 @@ const normalizedTranscript: { text: string; start: number; end: number }[] = nor
 export default function Home() {
   const [player, setPlayer] = useState<YT.Player | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
- useEffect(() => {
+  useEffect(() => {
     let animationFrame: number;
 
     const tick = () => {
       if (player) {
-        setCurrentTime(player.getCurrentTime());
-        console.log(player.getCurrentTime());
+        const time = player.getCurrentTime();
+        setCurrentTime(time);
+
+        // Find active transcript line
+        const idx = normalizedTranscript.findIndex(
+          (line) => time >= line.start && time < line.end
+        );
+        if (idx !== -1) setActiveIndex(idx);
       }
       animationFrame = requestAnimationFrame(tick);
     };
@@ -53,6 +60,15 @@ export default function Home() {
     tick();
     return () => cancelAnimationFrame(animationFrame);
   }, [player]);
+
+  // Compute visible lines
+  let visibleLines: typeof normalizedTranscript = [];
+  if (activeIndex !== null) {
+    visibleLines = normalizedTranscript.slice(
+      activeIndex - (activeIndex % 3),
+      activeIndex + (3 - activeIndex % 3)
+    );
+  }
 
   return (
     <div className="gap-4 p-4">
@@ -67,13 +83,17 @@ export default function Home() {
 
       {/* Transcript */}
       <div className="max-h-[390px] overflow-y-auto border rounded-lg p-4 bg-gray-50">
-        <p className={`p-1 transition-colors bg-yellow-200 font-semibold`}>
-            {normalizedTranscript.map((line, idx) => {
-            const isActive = currentTime >= line.start && currentTime < line.end;
-            return isActive ? <span>{" "}{line.text}</span> : null;
+        <p className={"p-1 transition-colors text-center"}>
+            {visibleLines.map((line, idx) => {
+              const isActive = activeIndex !== null && idx === activeIndex % 3;
+            return (
+              <span key={idx} >
+                {" "}
+                <span className={`${isActive ? "bg-yellow-200 font-semibold" : ""}`}>{line.text}</span>
+              </span>
+            )
         })}
         </p>
-
       </div>
     </div>
   );
