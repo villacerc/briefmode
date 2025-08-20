@@ -7,7 +7,9 @@ from dotenv import load_dotenv
 from googleapiclient.discovery import build
 import json
 from dataclasses import dataclass, field
-from openai import OpenAI
+from openai import OpenAI, AsyncOpenAI
+import random
+import time
 
 load_dotenv()
 
@@ -19,6 +21,9 @@ class TranscriptSnippet:
     duration: float
 
 client = OpenAI(
+    api_key=os.getenv("OPENAI_API_KEY"),
+)
+async_openai_client = AsyncOpenAI(
     api_key=os.getenv("OPENAI_API_KEY"),
 )
 
@@ -62,14 +67,44 @@ def chunk_list(lst, chunk_size):
     for i in range(0, len(lst), chunk_size):
         yield lst[i:i + chunk_size]
 
-def main():
+async def main():
 
     ytt_api = YouTubeTranscriptApi()
     
-    transcript = ytt_api.fetch("oLIkRpKLH1Y")
+    transcript = ytt_api.fetch("hDDTJEVJATw")
     input_list = [snippet.text for snippet in transcript.snippets]
+    print(input_list)
 
-    translate_chunk(input_list[:15])
+    # translate_chunk(input_list[:15])
+    # batch_translations(input_list)
+    # translations = await translate_transcript(input_list, concurrency=20)
+    # for i,t in enumerate(translations):
+    #     print(f"{i + 1}. {t}")
+
+def batch_translations(input_list):
+    # input_lines = "\n".join([snippet.text for snippet in input_list])
+    input_lines = input_list
+    jobs = [
+        {
+            "custom_id": f"line-{i}",
+            "method": "POST",
+            "url": "/v1/chat/completions",
+            "body": {
+                "model": "gpt-4o-mini",  # or gpt-3.5-turbo / any supported model
+                "messages": [
+                    {"role": "system", "content": "You are a helpful translator."},
+                    {"role": "user", "content": f"Translate to Filipino: {line}"}
+                ],
+                "max_tokens": 1000
+            }
+        }
+        for i, line in enumerate(input_lines)
+    ]
+    # Write to .jsonl file  
+    with open("batch_input.jsonl", "w", encoding="utf-8") as f:
+        for job in jobs:
+            f.write(json.dumps(job) + "\n")
+
 
 def translate_chunk(input_list):
     chunks = list(chunk_list(input_list, 15))
@@ -103,5 +138,46 @@ input:
         print(response.output[1].content[0].text) # gpt-5
         # print(response.output[0].content[0].text)
 
+# Simulate exponential backoff for robustness
+async def retry_with_backoff(coro, retries=5, base_delay=1):
+    for attempt in range(retries):
+        try:
+            return await coro
+        except Exception as e:
+            if attempt == retries - 1:
+                raise
+            delay = base_delay * (2 ** attempt) + random.uniform(0, 0.5)
+            print(f"Retrying in {delay:.1f}s after error: {e}")
+            await asyncio.sleep(delay)
+
+# Translate one snippet
+async def translate_snippet(snippet):
+    response = await retry_with_backoff(
+        async_openai_client.responses.create(
+            model="gpt-4.1-nano",
+            input=f"""
+            Translate the input below to Filipino.
+            Rules:
+            - Do not add explanations.
+            - Do not add ellipsis.
+            - Respond with only the translaation.
+            input:
+            {snippet}""",
+            store=False,
+        )
+    )
+    return response.output[0].content[0].text
+
+# Limit concurrency (e.g. 10 at a time)
+async def translate_transcript(snippets, concurrency=10):
+    semaphore = asyncio.Semaphore(concurrency)
+
+    async def worker(snippet):
+        async with semaphore:
+            return await translate_snippet(snippet)
+
+    return await asyncio.gather(*(worker(s) for s in snippets))
+
 if __name__ == "__main__":
-    main()
+    # main()
+    asyncio.run(main())
