@@ -8,10 +8,11 @@ from urllib.parse import urlparse, parse_qs
 import uvicorn
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from openai import OpenAI
+from openai import OpenAI, AsyncOpenAI
 import os
 from dotenv import load_dotenv
 from dataclasses import dataclass
+import random
 
 load_dotenv()
 
@@ -25,6 +26,7 @@ app = FastAPI(
 
 ytt_api = YouTubeTranscriptApi()
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+async_openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 translation_rules = os.getenv("TRANSLATION_RULES", "")
 
 @dataclass
@@ -76,7 +78,7 @@ async def get_transcript_by_id(id: str):
     except Exception as e:
         raise RuntimeError(f"Failed to fetch transcript for {id}") from e
     
-async def translate_transcript(transcript: List[FetchedTranscriptSnippet]) -> List[str]:
+async def translate_transcript_old(transcript: List[FetchedTranscriptSnippet]) -> List[str]:
     """
     Translate the transcript to desired language.
     """
@@ -138,6 +140,43 @@ def get_transcript_input_lines(transcript: List[FetchedTranscriptSnippet]) -> st
 def chunk_list(lst, chunk_size):
     for i in range(0, len(lst), chunk_size):
         yield lst[i:i + chunk_size]
+
+async def retry_with_backoff(coro, retries=5, base_delay=1):
+    for attempt in range(retries):
+        try:
+            return await coro
+        except Exception as e:
+            if attempt == retries - 1:
+                raise
+            delay = base_delay * (2 ** attempt) + random.uniform(0, 0.5)
+            print(f"Retrying in {delay:.1f}s after error: {e}")
+            await asyncio.sleep(delay)
+
+async def translate_snippet(snippet):
+    response = await retry_with_backoff(
+        async_openai_client.responses.create(
+            model="gpt-4.1-nano",
+            input=f"""
+            Translate the input below to Filipino.
+            Rules:
+            - Do not add explanations.
+            - Do not add ellipsis.
+            - Respond with only the translaation.
+            input:
+            {snippet}""",
+            store=False,
+        )
+    )
+    return response.output[0].content[0].text
+
+async def translate_transcript(snippets, concurrency=10):
+    semaphore = asyncio.Semaphore(concurrency)
+
+    async def worker(snippet):
+        async with semaphore:
+            return await translate_snippet(snippet)
+    
+    return await asyncio.gather(*(worker(s) for s in snippets))
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)

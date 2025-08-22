@@ -71,7 +71,7 @@ async def main():
 
     ytt_api = YouTubeTranscriptApi()
     
-    transcript = ytt_api.fetch("hDDTJEVJATw")
+    transcript = ytt_api.fetch("oLIkRpKLH1Y")
     input_list = [snippet.text for snippet in transcript.snippets]
     print(input_list)
 
@@ -168,7 +168,6 @@ async def translate_snippet(snippet):
     )
     return response.output[0].content[0].text
 
-# Limit concurrency (e.g. 10 at a time)
 async def translate_transcript(snippets, concurrency=10):
     semaphore = asyncio.Semaphore(concurrency)
 
