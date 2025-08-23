@@ -15,16 +15,29 @@ from dotenv import load_dotenv
 from dataclasses import dataclass, asdict
 import random
 import json
+from sqlalchemy.exc import SQLAlchemyError
+from database.models import create_tables
+import logging
 
-load_dotenv()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("uvicorn")
 
 executor = ThreadPoolExecutor()
+
+# Create the database tables if they don't exist
+try:
+    create_tables()
+    logger.info("Tables created successfully!")
+except SQLAlchemyError as e:
+    logger.error("Error creating tables:", e)
 
 app = FastAPI(
     title="Briefmode",
     description="YouTube Video Blog Posts",
     version="1.0.0"
 )
+
+load_dotenv()
 
 ytt_api = YouTubeTranscriptApi()
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
