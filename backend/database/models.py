@@ -41,7 +41,7 @@ class TranslationSnippet(Base):
     transcript_snippet = relationship("TranscriptSnippet", back_populates="translation_snippets")
 
 # Database setup
-DATABASE_URL = "postgresql://pgadmin:pgadmin@localhost:5432/briefmode"
+DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/briefmode"
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

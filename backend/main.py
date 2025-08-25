@@ -107,10 +107,6 @@ def create_translated_snippets(transcript: List[FetchedTranscriptSnippet], trans
         snippets.append(asdict(snippet))
     return snippets
 
-# Prepare the transcript input lines for translation.
-def get_transcript_input_lines(transcript: List[FetchedTranscriptSnippet]) -> str:
-       return "\n".join([f"{i + 1}. {snippet.text}" for i, snippet in enumerate(transcript)])
-
 # Stream translations for the transcript.
 async def stream_translations(transcript: List[FetchedTranscriptSnippet]):
     # Break transcript into chunks
@@ -146,7 +142,7 @@ async def retry_with_backoff(coro, retries=5, base_delay=1):
             print(f"Retrying in {delay:.1f}s after error: {e}")
             await asyncio.sleep(delay)
 
-async def translate_snippet(snippet):
+async def translate_snippet(snippet: FetchedTranscriptSnippet):
     try:
         response = await retry_with_backoff(
             async_openai_client.responses.create(
@@ -158,7 +154,7 @@ async def translate_snippet(snippet):
                 - Do not add ellipsis.
                 - Respond with only the translation.
                 input:
-                {snippet}""",
+                {snippet.text}""",
                 store=False,
             )
         )
@@ -166,7 +162,7 @@ async def translate_snippet(snippet):
     except Exception as e:
         raise RuntimeError(f"Failed to translate snippet: {str(e)}")
 
-async def translate_transcript(snippets, concurrency=10):
+async def translate_transcript(snippets: List[FetchedTranscriptSnippet], concurrency=10):
     semaphore = asyncio.Semaphore(concurrency)
 
     async def worker(snippet):
