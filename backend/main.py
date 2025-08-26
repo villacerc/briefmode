@@ -1,11 +1,6 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, HttpUrl
 from youtube_transcript_api import YouTubeTranscriptApi
-import re
 from typing import List, Optional, Dict, Any
-from urllib.parse import urlparse, parse_qs
 import uvicorn
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
@@ -18,20 +13,13 @@ import json
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from models import TranscriptSnippet, Video, Language
-from database import get_db, create_tables
+from database import get_db
 import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("uvicorn")
 
 executor = ThreadPoolExecutor()
-
-# Create the database tables if they don't exist
-try:
-    create_tables()
-    logger.info("Tables created successfully!")
-except SQLAlchemyError as e:
-    logger.error("Error creating tables:", e)
 
 app = FastAPI(
     title="Briefmode",
