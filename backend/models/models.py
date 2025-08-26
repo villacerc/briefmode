@@ -12,7 +12,12 @@ class Video(Base):
     created_at = Column(DateTime, server_default=func.now())
 
     language = relationship("Language", back_populates="videos")
-    transcript_snippets = relationship("TranscriptSnippet", back_populates="video", cascade="all, delete-orphan")
+    transcript_snippets = relationship(
+        "TranscriptSnippet", 
+        back_populates="video", 
+        cascade="all, delete-orphan", 
+        order_by="TranscriptSnippet.start",
+    )
 
 class TranscriptSnippet(Base):
     __tablename__ = "transcript_snippets"
@@ -39,7 +44,7 @@ class Translation(Base):
     id = Column(Integer, primary_key=True)
     snippet_id = Column(Integer, ForeignKey("transcript_snippets.id", ondelete="CASCADE"), nullable=False)
     language_id = Column(Integer, ForeignKey("languages.id"), nullable=False)
-    translated_text = Column(Text, nullable=False)
+    text = Column(Text, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
 
     transcript_snippet = relationship("TranscriptSnippet", back_populates="translations")

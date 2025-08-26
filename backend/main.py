@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from youtube_transcript_api import YouTubeTranscriptApi
 from typing import List, Optional, Dict, Any
 import uvicorn
@@ -11,8 +12,9 @@ from dataclasses import dataclass, asdict
 import random
 import json
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload, Session
 from sqlalchemy.exc import SQLAlchemyError
-from models import TranscriptSnippet, Video, Language
+from models import TranscriptSnippet, Video, Language, Translation
 from database import get_db
 import logging
 
@@ -61,9 +63,9 @@ def get_video(source_id: str, to_lang: str):
             raise ValueError(f"Language with code '{to_lang}' not found.")
 
         transcript = get_transcript(source_id)
-        # translations_generator = stream_translations(transcript, to_lang)
-        
-        # return StreamingResponse(translations_generator, media_type="application/json")
+        translations_generator = stream_translations(transcript, translation_lang)
+
+        return StreamingResponse(translations_generator, media_type="application/json")
     except Exception as e:
         message = f"Error occurred while attempting to translate video (id: {source_id}). {e}"
         logger.error(message)
@@ -91,7 +93,8 @@ def get_transcript(source_id: str) -> List[TranscriptSnippet]:
     try:
         # Fetch the video
         video = db.execute(
-            select(Video).where(Video.source_id == source_id)
+            select(Video).options(joinedload(Video.transcript_snippets))
+            .where(Video.source_id == source_id)
         ).scalars().first()
 
         # Check if transcript already exists
@@ -138,43 +141,21 @@ def get_transcript(source_id: str) -> List[TranscriptSnippet]:
     finally:
         db.close()
 
-# Create translated snippets from the original transcript and translations. 
-def create_translated_snippets(transcript: List[TranscriptSnippet], translations: List[str]) -> List[dict]:
-    snippets: List[dict] = []
-
-    for i, (t, tr) in enumerate(zip(transcript, translations)):
-        start = t.start
-        # end is the next snippet's start, or t.start + t.duration for last snippet
-        if i < len(transcript) - 1:
-            end = transcript[i + 1].start
-        else:
-            end = t.start + t.duration  # fallback if no next snippet
-        snippet = TranslatedSnippet(
-            text=t.text,
-            translation=tr,
-            start=start,
-            end=end,
-            duration=t.duration
-        )
-        # Convert to dict for JSON serialization
-        snippets.append(asdict(snippet))
-    return snippets
-
 # Stream translations for the transcript.
-async def stream_translations(transcript: List[TranscriptSnippet], to_lang: str):
+async def stream_translations(transcript: List[TranscriptSnippet], to_lang: Language):
     # Break transcript into chunks
     chunk_size = 15 
     for i in range(0, len(transcript), chunk_size):
         transcript_chunk = transcript[i:i + chunk_size]
 
         try:
-            translation_chunk = await translate_transcript(transcript_chunk, to_lang)
-            translated_snippets = create_translated_snippets(transcript_chunk, translation_chunk)
+            translated_chunk = await get_translations(transcript_chunk, to_lang)
 
-            # Send it to the client immediately
+            # Send a chunk to the client immediately
+            # yield: instead of returning just once, it can produce a series of results over time, pausing between each one.
             yield json.dumps({
                 "message": "Chunk translated",
-                "data": translated_snippets
+                "data": translated_chunk
             }) + "\n"
         except Exception as e:
             yield json.dumps({
@@ -183,25 +164,34 @@ async def stream_translations(transcript: List[TranscriptSnippet], to_lang: str)
                 "error": str(e)
             }) + "\n"
 
-# Retry a coroutine with exponential backoff.
+# Retry a coroutine with exponential backoff
+# coro is a coroutine AKA async function
 async def retry_with_backoff(coro, retries=5, base_delay=1):
     for attempt in range(retries):
         try:
             return await coro
         except Exception as e:
             if attempt == retries - 1:
-                raise
+                raise RuntimeError(f"Operation failed after {retries} attempts. {str(e)}") from e
             delay = base_delay * (2 ** attempt) + random.uniform(0, 0.5)
             print(f"Retrying in {delay:.1f}s after error: {e}")
             await asyncio.sleep(delay)
 
-async def translate_snippet(snippet: TranscriptSnippet, to_lang: str) -> str:
+async def get_translation(snippet: TranscriptSnippet, to_lang: Language, db: Session):
     try:
+        translation = db.query(Translation).filter(
+            Translation.snippet_id == snippet.id,
+            Translation.language_id == to_lang.id
+        ).first()
+
+        if translation:
+            return translation
+    
         response = await retry_with_backoff(
             async_openai_client.responses.create(
                 model="gpt-4.1-nano",
                 input=f"""
-                Translate the input below to {to_lang}.
+                Translate the input below to {to_lang.name}.
                 Rules:
                 - Do not add explanations.
                 - Do not add ellipsis.
@@ -211,18 +201,44 @@ async def translate_snippet(snippet: TranscriptSnippet, to_lang: str) -> str:
                 store=False,
             )
         )
-        return response.output[0].content[0].text
+
+        translation = Translation(
+            snippet_id=snippet.id,
+            language_id=to_lang.id,
+            text=response.output[0].content[0].text
+        )
+        db.add(translation)
+        db.commit()
+
+        return translation
     except Exception as e:
         raise RuntimeError(f"Failed to translate snippet. {str(e)}")
 
-async def translate_transcript(snippets: List[TranscriptSnippet], to_lang: str, concurrency=10):
+async def get_translations(snippets: List[TranscriptSnippet], to_lang: Language, concurrency=10) -> List[TranslatedSnippet]:
+    # Create a semaphore to limit concurrency to avoid overloading API and database
     semaphore = asyncio.Semaphore(concurrency)
 
-    async def worker(snippet):
+    async def worker(snippet, db):
         async with semaphore:
-            return await translate_snippet(snippet, to_lang)
-    
-    return await asyncio.gather(*(worker(s) for s in snippets))
+            translation = await get_translation(snippet, to_lang, db)
+            return asdict(TranslatedSnippet(
+                text=snippet.text,
+                translation=translation.text,
+                start=snippet.start,
+                end=snippet.end,
+                duration=snippet.duration
+            ))
+
+    try:
+        db = next(get_db())
+        # Return a list of all translated snippets in same order
+        # * unpacks the iterable into individual arguments for a function.
+        # eg. (worker(a), worker(b), worker(c))
+        return await asyncio.gather(*(worker(s, db) for s in snippets))
+    except Exception as e:
+        raise RuntimeError(f"Error occurred while translating snippets. {e}")
+    finally:
+        db.close()
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
