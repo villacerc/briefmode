@@ -1,8 +1,6 @@
-from sqlalchemy import Index, Column, Integer, String, Float, Text, ForeignKey, DateTime, func, create_engine
-from sqlalchemy.orm import relationship, sessionmaker # for creating database sessions 
-from sqlalchemy.orm import sessionmaker, declarative_base
-
-Base = declarative_base()
+from sqlalchemy import Index, Column, Integer, String, Float, Text, ForeignKey, DateTime, func
+from sqlalchemy.orm import relationship
+from database import Base
 
 class Video(Base):
     __tablename__ = "videos"
@@ -61,10 +59,3 @@ class Language(Base):
     videos = relationship("Video", back_populates="language")
     translations = relationship("Translation", back_populates="language")
 
-# Database setup
-DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/briefmode"
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-def create_tables():
-    Base.metadata.create_all(bind=engine)

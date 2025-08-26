@@ -17,7 +17,8 @@ import random
 import json
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
-from database.models import create_tables, SessionLocal, TranscriptSnippet, Video, Language
+from models import TranscriptSnippet, Video, Language
+from database import get_db, create_tables
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -65,11 +66,10 @@ async def root():
 
 # Fetch translation for a specific video ID.
 @app.get("/video/{source_id}", summary="Get Video Translation")
-def get_video(source_id: str):
+def get_video(source_id: str, to_lang: str):
     try:
         transcript = get_transcript(source_id)
-        return transcript
-        # translations_generator = stream_translations(transcript)
+        # translations_generator = stream_translations(transcript, to_lang)
         
         # return StreamingResponse(translations_generator, media_type="application/json")
     except Exception as e:
@@ -80,7 +80,7 @@ def get_video(source_id: str):
         )
 
 def get_transcript(source_id: str) -> List[TranscriptSnippet]:
-    db = SessionLocal()
+    db = next(get_db())
     try:
         # Fetch the video
         video = db.execute(
@@ -157,14 +157,14 @@ def create_translated_snippets(transcript: List[TranscriptSnippet], translations
     return snippets
 
 # Stream translations for the transcript.
-async def stream_translations(transcript: List[TranscriptSnippet]):
+async def stream_translations(transcript: List[TranscriptSnippet], to_lang: str):
     # Break transcript into chunks
     chunk_size = 15 
     for i in range(0, len(transcript), chunk_size):
         transcript_chunk = transcript[i:i + chunk_size]
 
         try:
-            translation_chunk = await translate_transcript(transcript_chunk)
+            translation_chunk = await translate_transcript(transcript_chunk, to_lang)
             translated_snippets = create_translated_snippets(transcript_chunk, translation_chunk)
 
             # Send it to the client immediately
@@ -191,13 +191,13 @@ async def retry_with_backoff(coro, retries=5, base_delay=1):
             print(f"Retrying in {delay:.1f}s after error: {e}")
             await asyncio.sleep(delay)
 
-async def translate_snippet(snippet: TranscriptSnippet):
+async def translate_snippet(snippet: TranscriptSnippet, to_lang: str) -> str:
     try:
         response = await retry_with_backoff(
             async_openai_client.responses.create(
                 model="gpt-4.1-nano",
                 input=f"""
-                Translate the input below to Filipino.
+                Translate the input below to {to_lang}.
                 Rules:
                 - Do not add explanations.
                 - Do not add ellipsis.
@@ -211,12 +211,12 @@ async def translate_snippet(snippet: TranscriptSnippet):
     except Exception as e:
         raise RuntimeError(f"Failed to translate snippet: {str(e)}")
 
-async def translate_transcript(snippets: List[TranscriptSnippet], concurrency=10):
+async def translate_transcript(snippets: List[TranscriptSnippet], to_lang: str, concurrency=10):
     semaphore = asyncio.Semaphore(concurrency)
 
     async def worker(snippet):
         async with semaphore:
-            return await translate_snippet(snippet)
+            return await translate_snippet(snippet, to_lang)
     
     return await asyncio.gather(*(worker(s) for s in snippets))
 
