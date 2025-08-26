@@ -57,31 +57,32 @@ async def root():
 def get_video(source_id: str, to_lang: str):
     try:
         translation_lang = get_language_by_code(to_lang)
+        if not translation_lang:
+            raise ValueError(f"Language with code '{to_lang}' not found.")
+
         transcript = get_transcript(source_id)
         # translations_generator = stream_translations(transcript, to_lang)
         
         # return StreamingResponse(translations_generator, media_type="application/json")
     except Exception as e:
-        print(f"Error occurred while attempting to translate video: {e}")
+        message = f"Error occurred while attempting to translate video (id: {source_id}). {e}"
+        logger.error(message)
         raise HTTPException(
             status_code=500,
-            detail=f"Error occurred while attempting to translate video (video ID: {source_id}): {str(e)}"
+            detail=message
         )
 
-def get_language_by_code(code: str) -> Optional[Language]:
+def get_language_by_code(code: str) -> Language:
     db = next(get_db())
     try:
         language = db.execute(
             select(Language).where(Language.code == code)
         ).scalars().first()
 
-        if not language:
-            raise ValueError(f"Language with code '{code}' not found.")
-
         return language
 
     except Exception as e:
-        raise RuntimeError(f"Failed to fetch language with code '{code}': {str(e)}") from e
+        raise RuntimeError(f"Failed to fetch language with code '{code}'. {str(e)}") from e
     finally:
         db.close()
 
@@ -101,9 +102,7 @@ def get_transcript(source_id: str) -> List[TranscriptSnippet]:
         transcript_data = ytt_api.fetch(source_id)
 
         # Ensure language exists
-        language = db.execute(
-            select(Language).where(Language.code == transcript_data.language_code)
-        ).scalars().first()
+        language = get_language_by_code(transcript_data.language_code)
 
         if not language:
             language = Language(code=transcript_data.language_code, name=transcript_data.language)
@@ -133,12 +132,11 @@ def get_transcript(source_id: str) -> List[TranscriptSnippet]:
         return transcript
     except SQLAlchemyError as e:
         db.rollback()
-        raise RuntimeError(f"Database error: {str(e)}") from e
+        raise RuntimeError(f"Database error. {str(e)}") from e
     except Exception as e:
-        raise RuntimeError(f"Failed to fetch transcript for {source_id}") from e
+        raise RuntimeError(f"Failed to fetch transcript. {str(e)}") from e
     finally:
         db.close()
-
 
 # Create translated snippets from the original transcript and translations. 
 def create_translated_snippets(transcript: List[TranscriptSnippet], translations: List[str]) -> List[dict]:
@@ -215,7 +213,7 @@ async def translate_snippet(snippet: TranscriptSnippet, to_lang: str) -> str:
         )
         return response.output[0].content[0].text
     except Exception as e:
-        raise RuntimeError(f"Failed to translate snippet: {str(e)}")
+        raise RuntimeError(f"Failed to translate snippet. {str(e)}")
 
 async def translate_transcript(snippets: List[TranscriptSnippet], to_lang: str, concurrency=10):
     semaphore = asyncio.Semaphore(concurrency)
