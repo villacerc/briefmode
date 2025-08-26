@@ -32,7 +32,7 @@ class TranscriptSnippet(Base):
     translations = relationship("Translation", back_populates="transcript_snippet", cascade="all, delete-orphan")
 
     __table_args__ = (
-        Index("ix_snippet_videoId_start", "video_id", "start", unique=True)
+        Index("ix_snippet_videoId_start", "video_id", "start", unique=True),
     )
 
 class Translation(Base):
@@ -48,7 +48,7 @@ class Translation(Base):
     language = relationship("Language", back_populates="translations")
 
     __table_args__ = (
-        Index("ix_translations_snippet_lang", "snippet_id", "language_id", unique=True)
+        Index("ix_translations_snippet_lang", "snippet_id", "language_id", unique=True),
     )
 
 class Language(Base):

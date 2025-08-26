@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, HttpUrl
-from youtube_transcript_api import YouTubeTranscriptApi, FetchedTranscriptSnippet
+from youtube_transcript_api import YouTubeTranscriptApi
 import re
 from typing import List, Optional, Dict, Any
 from urllib.parse import urlparse, parse_qs
@@ -15,8 +15,9 @@ from dotenv import load_dotenv
 from dataclasses import dataclass, asdict
 import random
 import json
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
-from database.models import create_tables
+from database.models import create_tables, SessionLocal, TranscriptSnippet, Video, Language
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -63,30 +64,78 @@ async def root():
     }
 
 # Fetch translation for a specific video ID.
-@app.get("/video/{video_id}", summary="Get Video Translation")
-async def get_video(video_id: str):
+@app.get("/video/{source_id}", summary="Get Video Translation")
+def get_video(source_id: str):
     try:
-        transcript = await get_transcript_by_id(video_id)
-        translations_generator = stream_translations(transcript)
+        transcript = get_transcript(source_id)
+        return transcript
+        # translations_generator = stream_translations(transcript)
         
-        return StreamingResponse(translations_generator, media_type="application/json")
+        # return StreamingResponse(translations_generator, media_type="application/json")
     except Exception as e:
         print(f"Error occurred while attempting to translate video: {e}")
         raise HTTPException(
             status_code=500,
-            detail=f"Error occurred while attempting to translate video (video ID: {video_id}): {str(e)}"
+            detail=f"Error occurred while attempting to translate video (video ID: {source_id}): {str(e)}"
         )
 
-# Internal function to fetch transcript by video ID.
-async def get_transcript_by_id(id: str):
+def get_transcript(source_id: str) -> List[TranscriptSnippet]:
+    db = SessionLocal()
     try:
-        transcript = ytt_api.fetch(id)
+        # Fetch the video
+        video = db.execute(
+            select(Video).where(Video.source_id == source_id)
+        ).scalars().first()
+
+        # Check if transcript already exists
+        if video and video.transcript_snippets:
+            return video.transcript_snippets
+
+        # Fetch from API
+        transcript_data = ytt_api.fetch(source_id)
+
+        # Ensure language exists
+        language = db.execute(
+            select(Language).where(Language.code == transcript_data.language_code)
+        ).scalars().first()
+
+        if not language:
+            language = Language(code=transcript_data.language_code, name=transcript_data.language)
+            db.add(language)
+            db.commit()
+            db.refresh(language)
+
+        video = Video(source_id=source_id, language_id=language.id)
+        db.add(video)
+        db.commit()
+        db.refresh(video)
+
+        # Save all snippets at once
+        transcript = []
+        for i, item in enumerate(transcript_data.snippets):
+            snippet = TranscriptSnippet(
+                video_id=video.id,
+                text=item.text,
+                start=item.start,
+                end=transcript_data[i + 1].start if i < len(transcript_data) - 1 else item.start + item.duration,
+                duration=item.duration
+            )
+            db.add(snippet)
+            transcript.append(snippet)
+
+        db.commit()
         return transcript
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise RuntimeError(f"Database error: {str(e)}") from e
     except Exception as e:
-        raise RuntimeError(f"Failed to fetch transcript for {id}") from e
+        raise RuntimeError(f"Failed to fetch transcript for {source_id}") from e
+    finally:
+        db.close()
+
 
 # Create translated snippets from the original transcript and translations. 
-def create_translated_snippets(transcript: List[FetchedTranscriptSnippet], translations: List[str]) -> List[dict]:
+def create_translated_snippets(transcript: List[TranscriptSnippet], translations: List[str]) -> List[dict]:
     snippets: List[dict] = []
 
     for i, (t, tr) in enumerate(zip(transcript, translations)):
@@ -108,7 +157,7 @@ def create_translated_snippets(transcript: List[FetchedTranscriptSnippet], trans
     return snippets
 
 # Stream translations for the transcript.
-async def stream_translations(transcript: List[FetchedTranscriptSnippet]):
+async def stream_translations(transcript: List[TranscriptSnippet]):
     # Break transcript into chunks
     chunk_size = 15 
     for i in range(0, len(transcript), chunk_size):
@@ -142,7 +191,7 @@ async def retry_with_backoff(coro, retries=5, base_delay=1):
             print(f"Retrying in {delay:.1f}s after error: {e}")
             await asyncio.sleep(delay)
 
-async def translate_snippet(snippet: FetchedTranscriptSnippet):
+async def translate_snippet(snippet: TranscriptSnippet):
     try:
         response = await retry_with_backoff(
             async_openai_client.responses.create(
@@ -162,7 +211,7 @@ async def translate_snippet(snippet: FetchedTranscriptSnippet):
     except Exception as e:
         raise RuntimeError(f"Failed to translate snippet: {str(e)}")
 
-async def translate_transcript(snippets: List[FetchedTranscriptSnippet], concurrency=10):
+async def translate_transcript(snippets: List[TranscriptSnippet], concurrency=10):
     semaphore = asyncio.Semaphore(concurrency)
 
     async def worker(snippet):
