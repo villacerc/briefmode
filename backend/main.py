@@ -56,6 +56,7 @@ async def root():
 @app.get("/video/{source_id}", summary="Get Video Translation")
 def get_video(source_id: str, to_lang: str):
     try:
+        translation_lang = get_language_by_code(to_lang)
         transcript = get_transcript(source_id)
         # translations_generator = stream_translations(transcript, to_lang)
         
@@ -66,6 +67,23 @@ def get_video(source_id: str, to_lang: str):
             status_code=500,
             detail=f"Error occurred while attempting to translate video (video ID: {source_id}): {str(e)}"
         )
+
+def get_language_by_code(code: str) -> Optional[Language]:
+    db = next(get_db())
+    try:
+        language = db.execute(
+            select(Language).where(Language.code == code)
+        ).scalars().first()
+
+        if not language:
+            raise ValueError(f"Language with code '{code}' not found.")
+
+        return language
+
+    except Exception as e:
+        raise RuntimeError(f"Failed to fetch language with code '{code}': {str(e)}") from e
+    finally:
+        db.close()
 
 def get_transcript(source_id: str) -> List[TranscriptSnippet]:
     db = next(get_db())
