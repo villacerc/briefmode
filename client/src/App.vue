@@ -6,7 +6,6 @@
         src="https://www.youtube.com/watch?v=oLIkRpKLH1Y" 
         width="100%"
         height="390"
-        :player-vars="{ width: '100%', height: '390' }"
         @ready="onReady"
       />
     </div>
@@ -19,11 +18,11 @@
           :key="idx"
         >
           <span
-            :class="activeIndex !== null && idx === activeIndex % 3
+            :class="activeIndex !== -1 && idx === activeIndex % 3
               ? 'bg-yellow-200 font-semibold'
               : ''"
           >
-            {{ line.text }}
+            {{ line.translation }}
           </span>
           {{" "}}
         </span>
@@ -33,61 +32,36 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from "vue";
+import { ref, reactive, onMounted, onUnmounted, computed } from "vue";
 import YouTube from "vue3-youtube";
+
+type TranslatedSnippet = {
+  text: string;
+  translation: string;
+  start: number;
+  end: number;
+  duration: number;
+};
 
 // Register YouTube component
 const youtube = YouTube;
 
-const transcript = [
-  { text: "This is me at 19 years old. I was broke,", start: 0.16, duration: 4.08 },
-  { text: "struggling in school, but with a dream", start: 2.56, duration: 4.319 },
-  { text: "that one day I'll make it big. Today, I", start: 4.24, duration: 4.56 },
-  { text: "can travel wherever I want \nto, dine at", start: 6.879, duration: 3.521 },
-  { text: "the finest restaurants, and have the", start: 8.8, duration: 2.799 },
-  { text: "freedom to do the things that I'm", start: 10.4, duration: 2.96 },
-  { text: "passionate about. This is the story of", start: 11.599, duration: 3.441 },
-  { text: "how I went from broke to becoming a", start: 13.36, duration: 3.759 },
-  { text: "millionaire in 24 months. It was the", start: 15.04, duration: 4.159 },
-  { text: "first quarter of 2019, the second year", start: 17.119, duration: 4.0 },
-  { text: "of my school. I was studying information", start: 19.199, duration: 3.92 },
-  { text: "technology and struggled with most of my", start: 21.119, duration: 4.4 },
-  { text: "modules. Because of my low GPA and lack", start: 23.119, duration: 4.32 },
-  { text: "of interest in studying, I knew that I", start: 25.519, duration: 3.6 },
-  { text: "couldn't make it to university. That's", start: 27.439, duration: 3.68 },
-  { text: "when I had an epiphany. I needed to make", start: 29.119, duration: 4.081 },
-  { text: "a change or remain unsuccessful for the", start: 31.119, duration: 3.921 },
-];
-
-function normalizeTranscript(transcript) {
-  return transcript.map((line, idx) => {
-    const next = transcript[idx + 1];
-    return {
-      ...line,
-      end: next ? next.start : line.start + line.duration
-    };
-  });
-}
-
-const normalizedTranscript = normalizeTranscript(transcript);
-
-// A ref in Vue 3 is reactive, which means whenever its .value changes, 
+// A ref in Vue 3 is reactive (good for primitives). Whenever its .value changes, 
 // Vue automatically re-renders any part of the template or computed properties that depend on it.
 const player = ref<any>(null);
-const currentTime = ref(0);
-const activeIndex = ref<number | null>(null);
+const activeIndex = ref<number | null>(-1);
+const snippets = reactive<TranslatedSnippet[]>([]);
 
 let animationFrame: number;
 
 const tick = () => {
   if (player.value) {
     const time = player.value.getCurrentTime();
-    currentTime.value = time;
 
-    const idx = normalizedTranscript.findIndex(
+    const idx = snippets.findIndex(
       (line) => time >= line.start && time < line.end
     );
-    if (idx !== -1) activeIndex.value = idx;
+    activeIndex.value = idx;
   }
   animationFrame = requestAnimationFrame(tick);
 };
@@ -97,13 +71,55 @@ const onReady = (event: any) => {
   tick();
 };
 
+const getVideoStream = async (source_id: string, to_lang: string) => {
+  try {
+    const res = await fetch(`http://localhost:8000/api/video/${source_id}?to_lang=${to_lang}`);
+    // res.body is a ReadableStream, representing the body of the response.
+    // getReader() returns a stream reader that allows you to read the data chunk by chunk.
+    const reader = res.body?.getReader();
+    // decoder to decode the stream of raw bytes into text
+    const decoder = new TextDecoder("utf-8");
+
+    let buffer = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (value) {
+        // collect the stream (as text) into the buffer
+        buffer += decoder.decode(value, { stream: true });
+        // split the buffer into lines
+        const lines = buffer.split("\n");
+        // last line might be incomplete, use it as starting point for the buffer
+        buffer = lines.pop(); 
+        for (const line of lines) {
+          if (line) {
+            const chunk = JSON.parse(line);
+            if(chunk.data) snippets.push(...chunk.data);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    throw new Error("Failed to fetch video stream. " + error);
+  }
+};
+
+
+onMounted(async () => {
+  try {
+    await getVideoStream("oLIkRpKLH1Y", "tl");
+  } catch (err) {
+    console.error(err);
+  }
+});
+
 onUnmounted(() => {
   cancelAnimationFrame(animationFrame);
 });
 
 const visibleLines = computed(() => {
-  if (activeIndex.value !== null) {
-    return normalizedTranscript.slice(
+  if (activeIndex.value !== -1) {
+    return snippets.slice(
       activeIndex.value - (activeIndex.value % 3),
       activeIndex.value + (3 - activeIndex.value % 3)
     );

@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 from youtube_transcript_api import YouTubeTranscriptApi
 from typing import List, Optional, Dict, Any
 import uvicorn
@@ -29,6 +30,15 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# TODO: refactor for other environments
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 load_dotenv()
 
 ytt_api = YouTubeTranscriptApi()
@@ -55,7 +65,7 @@ async def root():
     }
 
 # Fetch translation for a specific video ID.
-@app.get("/video/{source_id}", summary="Get Video Translation")
+@app.get("/api/video/{source_id}", summary="Get Video Translation")
 def get_video(source_id: str, to_lang: str):
     try:
         translation_lang = get_language_by_code(to_lang)
@@ -193,8 +203,8 @@ async def get_translation(snippet: TranscriptSnippet, to_lang: Language, db: Ses
                 input=f"""
                 Translate the input below to {to_lang.name}.
                 Rules:
-                - Do not add explanations.
-                - Do not add ellipsis.
+                - Do not add explanations or ellipsis.
+                - Capitalize the first word **only if it is required by grammar**.
                 - Respond with only the translation.
                 input:
                 {snippet.text}""",
@@ -212,7 +222,12 @@ async def get_translation(snippet: TranscriptSnippet, to_lang: Language, db: Ses
 
         return translation
     except Exception as e:
-        raise RuntimeError(f"Failed to translate snippet. {str(e)}")
+        logger.error(f"Failed to translate snippet (id: {snippet.id}). {str(e)}")
+        return Translation(
+            snippet_id=snippet.id,
+            language_id=to_lang.id,
+            text="< >"
+        )
 
 async def get_translations(snippets: List[TranscriptSnippet], to_lang: Language, concurrency=10) -> List[TranslatedSnippet]:
     # Create a semaphore to limit concurrency to avoid overloading API and database

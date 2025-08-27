@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session, DeclarativeBase
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
+# TODO: refactor for other environments
 # Database setup
 DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/briefmode"
 engine = create_engine(DATABASE_URL)
