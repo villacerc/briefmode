@@ -11,13 +11,15 @@
     </div>
 
     <!-- Transcript -->
-    <div class="max-h-[390px] overflow-y-auto border rounded-lg p-4 bg-gray-50">
+    <div
+      class="max-h-[390px] overflow-y-auto border rounded-lg p-4 bg-gray-50 mt-4 text-accent-content"
+    >
       <p class="p-1 transition-colors text-center">
         <span v-for="(line, idx) in visibleLines" :key="idx">
           <span
             :class="
               activeIndex !== -1 && idx === activeIndex % 3
-                ? 'bg-yellow-200 font-semibold'
+                ? 'bg-secondary font-semibold'
                 : ''
             "
           >
