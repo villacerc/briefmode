@@ -66,11 +66,11 @@ async def root():
 
 # Fetch translation for a specific video ID.
 @app.get("/api/video/{source_id}", summary="Get Video Translation")
-def get_video(source_id: str, to_lang: str):
+def get_video(source_id: str, lang: str):
     try:
-        translation_lang = get_language_by_code(to_lang)
+        translation_lang = get_language_by_code(lang)
         if not translation_lang:
-            raise ValueError(f"Language with code '{to_lang}' not found.")
+            raise ValueError(f"Language with code '{lang}' not found.")
 
         transcript = get_transcript(source_id)
         translations_generator = stream_translations(transcript, translation_lang)
@@ -152,14 +152,14 @@ def get_transcript(source_id: str) -> List[TranscriptSnippet]:
         db.close()
 
 # Stream translations for the transcript.
-async def stream_translations(transcript: List[TranscriptSnippet], to_lang: Language):
+async def stream_translations(transcript: List[TranscriptSnippet], lang: Language):
     # Break transcript into chunks
     chunk_size = 15 
     for i in range(0, len(transcript), chunk_size):
         transcript_chunk = transcript[i:i + chunk_size]
 
         try:
-            translated_chunk = await get_translations(transcript_chunk, to_lang)
+            translated_chunk = await get_translations(transcript_chunk, lang)
 
             # Send a chunk to the client immediately
             # yield: instead of returning just once, it can produce a series of results over time, pausing between each one.
@@ -187,11 +187,11 @@ async def retry_with_backoff(coro, retries=5, base_delay=1):
             print(f"Retrying in {delay:.1f}s after error: {e}")
             await asyncio.sleep(delay)
 
-async def get_translation(snippet: TranscriptSnippet, to_lang: Language, db: Session):
+async def get_translation(snippet: TranscriptSnippet, lang: Language, db: Session):
     try:
         translation = db.query(Translation).filter(
             Translation.snippet_id == snippet.id,
-            Translation.language_id == to_lang.id
+            Translation.language_id == lang.id
         ).first()
 
         if translation:
@@ -201,7 +201,7 @@ async def get_translation(snippet: TranscriptSnippet, to_lang: Language, db: Ses
             async_openai_client.responses.create(
                 model="gpt-4.1-nano",
                 input=f"""
-                Translate the input below to {to_lang.name}.
+                Translate the input below to {lang.name}.
                 Rules:
                 - Do not add explanations or ellipsis.
                 - Capitalize the first word **only if it is required by grammar**.
@@ -214,7 +214,7 @@ async def get_translation(snippet: TranscriptSnippet, to_lang: Language, db: Ses
 
         translation = Translation(
             snippet_id=snippet.id,
-            language_id=to_lang.id,
+            language_id=lang.id,
             text=response.output[0].content[0].text
         )
         db.add(translation)
@@ -225,17 +225,17 @@ async def get_translation(snippet: TranscriptSnippet, to_lang: Language, db: Ses
         logger.error(f"Failed to translate snippet (id: {snippet.id}). {str(e)}")
         return Translation(
             snippet_id=snippet.id,
-            language_id=to_lang.id,
+            language_id=lang.id,
             text="< >"
         )
 
-async def get_translations(snippets: List[TranscriptSnippet], to_lang: Language, concurrency=10) -> List[TranslatedSnippet]:
+async def get_translations(snippets: List[TranscriptSnippet], lang: Language, concurrency=10) -> List[TranslatedSnippet]:
     # Create a semaphore to limit concurrency to avoid overloading API and database
     semaphore = asyncio.Semaphore(concurrency)
 
     async def worker(snippet, db):
         async with semaphore:
-            translation = await get_translation(snippet, to_lang, db)
+            translation = await get_translation(snippet, lang, db)
             return asdict(TranslatedSnippet(
                 text=snippet.text,
                 translation=translation.text,

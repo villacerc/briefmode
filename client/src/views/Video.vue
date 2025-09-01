@@ -31,8 +31,11 @@
 </template>
 
 <script setup lang="ts">
+import { useRoute } from "vue-router";
 import { ref, reactive, onMounted, onUnmounted, computed } from "vue";
 import YouTube from "vue3-youtube";
+
+const route = useRoute();
 
 type TranslatedSnippet = {
   text: string;
@@ -70,10 +73,10 @@ const onReady = (event: any) => {
   tick();
 };
 
-const getVideoStream = async (source_id: string, to_lang: string) => {
+const getVideoStream = async (source_id: string, lang: string) => {
   try {
     const res = await fetch(
-      `http://localhost:8000/api/video/${source_id}?to_lang=${to_lang}`
+      `http://localhost:8000/api/video/${source_id}?lang=${lang}`
     );
     // res.body is a ReadableStream, representing the body of the response.
     // getReader() returns a stream reader that allows you to read the data chunk by chunk.
@@ -110,8 +113,9 @@ const getVideoStream = async (source_id: string, to_lang: string) => {
 
 onMounted(async () => {
   try {
-    await getVideoStream("oLIkRpKLH1Y", "tl");
+    await getVideoStream(route.params.id as string, route.query.lang as string);
   } catch (err) {
+    // TODO: redirect to error page
     console.error(err);
   }
 });
