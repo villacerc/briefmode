@@ -61,7 +61,7 @@
               >
                 <li
                   v-for="(lang, index) in filteredLanguages"
-                  :key="lang.value"
+                  :key="lang.id"
                   :class="[
                     'px-4 py-2 cursor-pointer',
                     { 'bg-secondary text-base-content': index === highlighted },
@@ -69,7 +69,7 @@
                   @mousedown.prevent="selectLanguage(lang)"
                   @mouseover="highlighted = index"
                 >
-                  {{ lang.label }}
+                  {{ lang.name }}
                 </li>
               </ul>
             </div>
@@ -81,7 +81,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
@@ -92,24 +92,36 @@ const selectedLanguage = ref(null);
 const open = ref(false);
 const showError = ref(false);
 const highlighted = ref(0);
+const languages = ref([]);
 
-const languages = [
-  { value: "en", label: "English" },
-  { value: "es", label: "Spanish" },
-  { value: "fr", label: "French" },
-  { value: "de", label: "German" },
-  { value: "zh", label: "Chinese" },
-  { value: "ja", label: "Japanese" },
-];
+onMounted(async () => {
+  try {
+    await fetchLanguages();
+  } catch (err) {
+    console.error(err);
+  }
+});
+
+async function fetchLanguages() {
+  try {
+    const res = await fetch("http://localhost:8000/api/languages");
+    const body = await res.json();
+    if (body.data) {
+      languages.value = body.data;
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
 
 watch(youtubeLink, () => {
   if (isValidYouTubeUrl()) showError.value = false;
 });
 
 const filteredLanguages = computed(() => {
-  if (!search.value) return languages;
-  return languages.filter((l) =>
-    l.label.toLowerCase().includes(search.value.toLowerCase())
+  if (!search.value) return languages.value;
+  return languages.value.filter((lang) =>
+    lang.name.toLowerCase().startsWith(search.value.toLowerCase())
   );
 });
 
@@ -122,7 +134,7 @@ function isValidYouTubeUrl() {
 
 function toggleDropdown() {
   if (youtubeLink.value && isValidYouTubeUrl()) {
-    open.value = !open.value;
+    open.value = true;
     showError.value = false;
   } else {
     open.value = false;
@@ -133,12 +145,12 @@ function toggleDropdown() {
 function goToVideo(lang) {
   if (youtubeLink.value && lang) {
     const videoId = youtubeLink.value.split("v=")[1];
-    const to_lang = lang.value;
+    const lang_code = lang.code;
     // Navigate to the video page with the selected language
     router.push({
       name: "Video",
       params: { id: videoId },
-      query: { lang: to_lang },
+      query: { lang: lang_code },
     });
   }
 }

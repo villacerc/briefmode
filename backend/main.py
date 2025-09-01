@@ -84,6 +84,22 @@ def get_video(source_id: str, lang: str):
             detail=message
         )
 
+@app.get("/api/languages", summary="Get Languages")
+def get_video_languages():
+    db = next(get_db())
+    try:
+        languages = db.execute(select(Language)).scalars().all()
+        return {"data": languages}
+    except Exception as e:
+        message = f"Error occurred while attempting to fetch languages. {e}"
+        logger.error(message)
+        raise HTTPException(
+            status_code=500,
+            detail=message
+        )
+    finally:
+        db.close()
+
 def get_language_by_code(code: str) -> Language:
     db = next(get_db())
     try:

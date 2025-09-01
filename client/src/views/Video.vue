@@ -73,7 +73,7 @@ const onReady = (event: any) => {
   tick();
 };
 
-const getVideoStream = async (source_id: string, lang: string) => {
+const fetchVideoStream = async (source_id: string, lang: string) => {
   try {
     const res = await fetch(
       `http://localhost:8000/api/video/${source_id}?lang=${lang}`
@@ -97,6 +97,7 @@ const getVideoStream = async (source_id: string, lang: string) => {
         // split the buffer into lines
         const lines = buffer.split("\n");
         // last line might be incomplete, use it as starting point for the buffer
+        // lines.pop() mutates the array
         buffer = lines.pop() || "";
         for (const line of lines) {
           if (line) {
@@ -113,7 +114,10 @@ const getVideoStream = async (source_id: string, lang: string) => {
 
 onMounted(async () => {
   try {
-    await getVideoStream(route.params.id as string, route.query.lang as string);
+    await fetchVideoStream(
+      route.params.id as string,
+      route.query.lang as string
+    );
   } catch (err) {
     // TODO: redirect to error page
     console.error(err);
