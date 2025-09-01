@@ -3,7 +3,7 @@
     <!-- Video -->
     <div>
       <youtube
-        src="https://www.youtube.com/watch?v=oLIkRpKLH1Y" 
+        src="https://www.youtube.com/watch?v=oLIkRpKLH1Y"
         width="100%"
         height="390"
         @ready="onReady"
@@ -13,18 +13,17 @@
     <!-- Transcript -->
     <div class="max-h-[390px] overflow-y-auto border rounded-lg p-4 bg-gray-50">
       <p class="p-1 transition-colors text-center">
-        <span
-          v-for="(line, idx) in visibleLines"
-          :key="idx"
-        >
+        <span v-for="(line, idx) in visibleLines" :key="idx">
           <span
-            :class="activeIndex !== -1 && idx === activeIndex % 3
-              ? 'bg-yellow-200 font-semibold'
-              : ''"
+            :class="
+              activeIndex !== -1 && idx === activeIndex % 3
+                ? 'bg-yellow-200 font-semibold'
+                : ''
+            "
           >
             {{ line.translation }}
           </span>
-          {{" "}}
+          {{ " " }}
         </span>
       </p>
     </div>
@@ -46,7 +45,7 @@ type TranslatedSnippet = {
 // Register YouTube component
 const youtube = YouTube;
 
-// A ref in Vue 3 is reactive (good for primitives). Whenever its .value changes, 
+// A ref in Vue 3 is reactive (good for primitives). Whenever its .value changes,
 // Vue automatically re-renders any part of the template or computed properties that depend on it.
 const player = ref<any>(null);
 const activeIndex = ref<number>(-1);
@@ -73,7 +72,9 @@ const onReady = (event: any) => {
 
 const getVideoStream = async (source_id: string, to_lang: string) => {
   try {
-    const res = await fetch(`http://localhost:8000/api/video/${source_id}?to_lang=${to_lang}`);
+    const res = await fetch(
+      `http://localhost:8000/api/video/${source_id}?to_lang=${to_lang}`
+    );
     // res.body is a ReadableStream, representing the body of the response.
     // getReader() returns a stream reader that allows you to read the data chunk by chunk.
     const reader = res.body?.getReader();
@@ -97,7 +98,7 @@ const getVideoStream = async (source_id: string, to_lang: string) => {
         for (const line of lines) {
           if (line) {
             const chunk = JSON.parse(line);
-            if(chunk.data) snippets.push(...chunk.data);
+            if (chunk.data) snippets.push(...chunk.data);
           }
         }
       }
@@ -106,7 +107,6 @@ const getVideoStream = async (source_id: string, to_lang: string) => {
     throw new Error("Failed to fetch video stream. " + error);
   }
 };
-
 
 onMounted(async () => {
   try {
@@ -124,7 +124,7 @@ const visibleLines = computed(() => {
   if (activeIndex.value !== -1) {
     return snippets.slice(
       activeIndex.value - (activeIndex.value % 3),
-      activeIndex.value + (3 - activeIndex.value % 3)
+      activeIndex.value + (3 - (activeIndex.value % 3))
     );
   }
   return [];
