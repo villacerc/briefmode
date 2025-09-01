@@ -1,129 +1,129 @@
 <template>
-  <div class="gap-4 p-4">
-    <!-- Video -->
-    <div>
-      <youtube
-        src="https://www.youtube.com/watch?v=oLIkRpKLH1Y" 
-        width="100%"
-        height="390"
-        @ready="onReady"
-      />
-    </div>
+  <div class="min-h-screen flex items-center justify-center bg-base-200 p-4">
+    <div class="card bg-base-100 card-border border-base-300 w-full max-w-lg">
+      <div class="card-body">
+        
+        <!-- Input + Button -->
+        <div class="flex flex-col sm:flex-row gap-3">
+          <input
+            id="youtubeLink"
+            v-model="youtubeLink"
+            type="text"
+            placeholder="Paste YouTube Link"
+            class="w-full input input-neutral input-lg"
+          />
+          <button class="btn btn-dash btn-neutral sm:w-auto w-full btn-lg">
+            Translate
+          </button>
+        </div>
+        
+        <!-- Dropdown -->
+         <div class="w-full form-control flex flex-col sm:flex-row sm:w-[200px] gap-2">
+    <label class="label">
+      <span class="label-text text-xs">Translate to</span>
+    </label>
 
-    <!-- Transcript -->
-    <div class="max-h-[390px] overflow-y-auto border rounded-lg p-4 bg-gray-50">
-      <p class="p-1 transition-colors text-center">
-        <span
-          v-for="(line, idx) in visibleLines"
-          :key="idx"
-        >
-          <span
-            :class="activeIndex !== -1 && idx === activeIndex % 3
-              ? 'bg-yellow-200 font-semibold'
-              : ''"
-          >
-            {{ line.translation }}
-          </span>
-          {{" "}}
-        </span>
-      </p>
+    <!-- Search input -->
+    <div class="relative">
+        <input
+      type="text"
+      v-model="search"
+      placeholder="Select language"
+      @focus="open = true"
+      class="w-full input input-primary input-xs"
+      @keydown.down.prevent="highlightNext"
+      @keydown.up.prevent="highlightPrev"
+      @keydown.enter.prevent="selectHighlighted"
+    />
+
+    <!-- Dropdown -->
+    <ul
+      v-if="open && filteredLanguages.length"
+      class="absolute z-10 bg-base-100 border rounded-lg w-full t-5 max-h-48 overflow-auto shadow-lg"
+    >
+      <li
+        v-for="(lang, index) in filteredLanguages"
+        :key="lang.value"
+        :class="['px-4 py-2 cursor-pointer', { 'bg-secondary text-base-content': index === highlighted }]"
+        @mousedown.prevent="selectLanguage(lang)"
+        @mouseover="highlighted = index"
+      >
+        {{ lang.label }}
+      </li>
+    </ul>
+    </div>  
+  </div>
+      </div>
     </div>
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted, computed } from "vue";
-import YouTube from "vue3-youtube";
 
-type TranslatedSnippet = {
-  text: string;
-  translation: string;
-  start: number;
-  end: number;
-  duration: number;
-};
+<script setup>
+import { ref, computed, watch } from "vue";
 
-// Register YouTube component
-const youtube = YouTube;
+const search = ref("");
+const selectedLanguage = ref(null);
+const open = ref(false);
+const highlighted = ref(0);
 
-// A ref in Vue 3 is reactive (good for primitives). Whenever its .value changes, 
-// Vue automatically re-renders any part of the template or computed properties that depend on it.
-const player = ref<any>(null);
-const activeIndex = ref<number | null>(-1);
-const snippets = reactive<TranslatedSnippet[]>([]);
+const languages = [
+  { value: "en", label: "English" },
+  { value: "es", label: "Spanish" },
+  { value: "fr", label: "French" },
+  { value: "de", label: "German" },
+  { value: "zh", label: "Chinese" },
+  { value: "ja", label: "Japanese" },
+];
 
-let animationFrame: number;
-
-const tick = () => {
-  if (player.value) {
-    const time = player.value.getCurrentTime();
-
-    const idx = snippets.findIndex(
-      (line) => time >= line.start && time < line.end
-    );
-    activeIndex.value = idx;
-  }
-  animationFrame = requestAnimationFrame(tick);
-};
-
-const onReady = (event: any) => {
-  player.value = event.target;
-  tick();
-};
-
-const getVideoStream = async (source_id: string, to_lang: string) => {
-  try {
-    const res = await fetch(`http://localhost:8000/api/video/${source_id}?to_lang=${to_lang}`);
-    // res.body is a ReadableStream, representing the body of the response.
-    // getReader() returns a stream reader that allows you to read the data chunk by chunk.
-    const reader = res.body?.getReader();
-    // decoder to decode the stream of raw bytes into text
-    const decoder = new TextDecoder("utf-8");
-
-    let buffer = "";
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      if (value) {
-        // collect the stream (as text) into the buffer
-        buffer += decoder.decode(value, { stream: true });
-        // split the buffer into lines
-        const lines = buffer.split("\n");
-        // last line might be incomplete, use it as starting point for the buffer
-        buffer = lines.pop(); 
-        for (const line of lines) {
-          if (line) {
-            const chunk = JSON.parse(line);
-            if(chunk.data) snippets.push(...chunk.data);
-          }
-        }
-      }
-    }
-  } catch (error) {
-    throw new Error("Failed to fetch video stream. " + error);
-  }
-};
-
-
-onMounted(async () => {
-  try {
-    await getVideoStream("oLIkRpKLH1Y", "tl");
-  } catch (err) {
-    console.error(err);
-  }
+// Show all languages if empty or filter if typing
+const filteredLanguages = computed(() => {
+  if (!search.value) return languages; // show all when input empty
+  return languages.filter((l) =>
+    l.label.toLowerCase().includes(search.value.toLowerCase())
+  );
 });
 
-onUnmounted(() => {
-  cancelAnimationFrame(animationFrame);
+// Watch input changes
+watch(search, (newValue) => {
+  open.value = true; // always open on input change
+  highlighted.value = 0;
 });
 
-const visibleLines = computed(() => {
-  if (activeIndex.value !== -1) {
-    return snippets.slice(
-      activeIndex.value - (activeIndex.value % 3),
-      activeIndex.value + (3 - activeIndex.value % 3)
-    );
-  }
-  return [];
-});
+function selectLanguage(lang) {
+  selectedLanguage.value = lang;
+  search.value = lang.label;
+  open.value = false;
+  highlighted.value = 0;
+}
+
+function highlightNext() {
+  if (highlighted.value < filteredLanguages.value.length - 1) highlighted.value++;
+}
+
+function highlightPrev() {
+  if (highlighted.value > 0) highlighted.value--;
+}
+
+function selectHighlighted() {
+  const lang = filteredLanguages.value[highlighted.value];
+  if (lang) selectLanguage(lang);
+}
+
+// Close dropdown when clicking outside
+const clickOutsideHandler = (event) => {
+  if (!event.target.closest(".form-control")) open.value = false;
+};
+document.addEventListener("click", clickOutsideHandler);
 </script>
+
+<style scoped>
+/* Optional: smooth scroll on highlighted */
+ul::-webkit-scrollbar {
+  width: 6px;
+}
+ul::-webkit-scrollbar-thumb {
+  background-color: rgba(0,0,0,0.2);
+  border-radius: 3px;
+}
+</style>
