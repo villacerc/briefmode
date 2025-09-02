@@ -1,25 +1,30 @@
 <template>
-  <div class="gap-4 p-4">
+  <div class="relative gap-4 h-screen">
+    <!-- Overlay -->
+    <div v-if="isDragging" class="fixed inset-0 z-50 cursor-grabbing"></div>
     <!-- Video -->
-    <div>
+    <div ref="videoContainer" class="h-full w-full">
       <youtube
+        ref="youtubePlayer"
         src="https://www.youtube.com/watch?v=oLIkRpKLH1Y"
         width="100%"
-        height="390"
+        height="100%"
+        class="h-full"
         @ready="onReady"
       />
     </div>
 
-    <!-- Transcript -->
+    <!-- Floating Transcript -->
     <div
-      class="max-h-[390px] overflow-y-auto border rounded-lg p-4 bg-gray-50 mt-4 text-accent-content"
+      ref="draggableBox"
+      class="fixed bottom-4 w-fit h-fit overflow-y-auto text-2xl hover:outline hover:outline-white"
     >
-      <p class="p-1 transition-colors text-center">
+      <p class="p-1 bg-black/70 text-white">
         <span v-for="(line, idx) in visibleLines" :key="idx">
           <span
             :class="
               activeIndex !== -1 && idx === activeIndex % 3
-                ? 'bg-secondary font-semibold'
+                ? 'text-secondary'
                 : ''
             "
           >
@@ -55,8 +60,65 @@ const youtube = YouTube;
 const player = ref<any>(null);
 const activeIndex = ref<number>(-1);
 const snippets = reactive<TranslatedSnippet[]>([]);
+const isDragging = ref(false);
+const draggableBox = ref<HTMLElement | null>(null);
 
 let animationFrame: number;
+
+onMounted(async () => {
+  let overlay: HTMLDivElement | null = null;
+  const el = draggableBox.value;
+  let offsetX = 0,
+    offsetY = 0;
+
+  if (el) {
+    el.addEventListener("mousedown", (e) => {
+      isDragging.value = true;
+      offsetX = e.clientX - el.offsetLeft;
+      offsetY = e.clientY - el.offsetTop;
+      document.body.style.userSelect = "none";
+    });
+
+    document.addEventListener("mousemove", (e) => {
+      if (!isDragging.value) return;
+      el.style.left = e.clientX - offsetX + "px";
+      el.style.top = e.clientY - offsetY + "px";
+    });
+
+    document.addEventListener("mouseup", () => {
+      isDragging.value = false;
+      document.body.style.userSelect = "";
+      if (overlay) {
+        overlay.remove();
+        overlay = null;
+      }
+    });
+  }
+
+  try {
+    await fetchVideoStream(
+      route.params.id as string,
+      route.query.lang as string
+    );
+  } catch (err) {
+    // TODO: redirect to error page
+    console.error(err);
+  }
+});
+
+onUnmounted(() => {
+  cancelAnimationFrame(animationFrame);
+});
+
+const visibleLines = computed(() => {
+  if (activeIndex.value !== -1) {
+    return snippets.slice(
+      activeIndex.value - (activeIndex.value % 3),
+      activeIndex.value + (3 - (activeIndex.value % 3))
+    );
+  }
+  return [];
+});
 
 const tick = () => {
   if (player.value) {
@@ -113,30 +175,4 @@ const fetchVideoStream = async (source_id: string, lang: string) => {
     throw new Error("Failed to fetch video stream. " + error);
   }
 };
-
-onMounted(async () => {
-  try {
-    await fetchVideoStream(
-      route.params.id as string,
-      route.query.lang as string
-    );
-  } catch (err) {
-    // TODO: redirect to error page
-    console.error(err);
-  }
-});
-
-onUnmounted(() => {
-  cancelAnimationFrame(animationFrame);
-});
-
-const visibleLines = computed(() => {
-  if (activeIndex.value !== -1) {
-    return snippets.slice(
-      activeIndex.value - (activeIndex.value % 3),
-      activeIndex.value + (3 - (activeIndex.value % 3))
-    );
-  }
-  return [];
-});
 </script>
