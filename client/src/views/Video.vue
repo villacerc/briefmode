@@ -66,7 +66,6 @@ const draggableBox = ref<HTMLElement | null>(null);
 let animationFrame: number;
 
 onMounted(async () => {
-  let overlay: HTMLDivElement | null = null;
   const el = draggableBox.value;
   let offsetX = 0,
     offsetY = 0;
@@ -88,10 +87,6 @@ onMounted(async () => {
     document.addEventListener("mouseup", () => {
       isDragging.value = false;
       document.body.style.userSelect = "";
-      if (overlay) {
-        overlay.remove();
-        overlay = null;
-      }
     });
   }
 

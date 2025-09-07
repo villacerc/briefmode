@@ -1,10 +1,10 @@
 <template>
   <div class="min-h-screen flex justify-center bg-base-100">
     <div class="w-full mt-30">
-      <h1 class="text-accent-content text-4xl mb-2 text-center">
+      <h1 class="text-accent-content text-5xl mb-2 text-center">
         YouTube Video AI Translator
       </h1>
-      <h2 class="text-accent-content text-md mb-6 text-center">
+      <h2 class="text-accent-content text-md text-center">
         Watch YouTube videos with accurate, context-aware translations.
       </h2>
       <div class="m-auto max-w-3xl p-2">
@@ -50,7 +50,7 @@
                   type="text"
                   v-model="search"
                   placeholder="Search language"
-                  class="w-full input input-xs"
+                  class="w-full input input-xs bg-gray-50"
                   @keydown.enter.prevent="selectHighlighted"
                 />
               </div>
