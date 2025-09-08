@@ -33,7 +33,7 @@
               Translate
               <!-- Solid triangle SVG -->
               <svg
-                class="w-2 h-2 ml-2 transition-transform duration-200"
+                class="w-2 h-2 mt-1 transition-transform duration-200"
                 viewBox="0 0 10 6"
                 xmlns="http://www.w3.org/2000/svg"
               >
@@ -50,6 +50,7 @@
                   type="text"
                   v-model="search"
                   placeholder="Search language"
+                  ref="searchLanguageInput"
                   class="w-full input input-xs bg-gray-50"
                   @keydown.enter.prevent="selectHighlighted"
                 />
@@ -81,7 +82,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, nextTick } from "vue";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
@@ -89,6 +90,7 @@ const router = useRouter();
 const youtubeLink = ref("");
 const search = ref("");
 const selectedLanguage = ref(null);
+const searchLanguageInput = ref(null);
 const open = ref(false);
 const showError = ref(false);
 const highlighted = ref(0);
@@ -116,6 +118,13 @@ async function fetchLanguages() {
 
 watch(youtubeLink, () => {
   if (isValidYouTubeUrl()) showError.value = false;
+});
+
+watch(open, async (newVal) => {
+  if (newVal) {
+    await nextTick();
+    searchLanguageInput.value?.focus();
+  }
 });
 
 const filteredLanguages = computed(() => {

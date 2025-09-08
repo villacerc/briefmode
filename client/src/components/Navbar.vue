@@ -1,5 +1,5 @@
 <template>
-  <nav class="bg-base-100 shadow-sm flex justify-center items-center h-12">
+  <nav class="bg-base-100 flex justify-center items-center h-12">
     <div class="flex flex-1">
       <ul class="menu menu-horizontal m-auto text-lg p-0">
         <li><a>Support Us</a></li>
