@@ -35,14 +35,10 @@
   --noise: 0;
 }
 
-html {
-  font-size: 16px;
-}
-
 :root {
   --sidebar-width: 350px;
-  --space-above-player: 125px;
-  --space-below-player: 65px;
+  --space-above-player: 7.8125rem;
+  --space-below-player: 6rem;
   --max-player-height: calc(100vh - var(--space-above-player) - var(--space-below-player));
 }
 
@@ -73,5 +69,4 @@ html {
     width: var(--sidebar-width);
     flex-shrink: 0;
   }
-
 }

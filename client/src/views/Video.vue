@@ -1,30 +1,66 @@
 <template>
-  <div>
-    <component
-      :is="VideoLayout1"
-      :visible-lines="visibleLines"
-      :active-index="activeIndex"
-      :is-dragging="isDragging"
-      @ready="onReady"
-      @update:active-index="activeIndex = $event"
-    />
+  <div class="my-10 mx-15">
+    <h1 class="text-xl font-medium mb-5 text-accent-content text-center">
+      How I Went From Broke To Millionaire in 24 Months
+    </h1>
+    <div class="youtube-layout">
+      <div class="youtube-primary">
+        <div
+          ref="videoContainer"
+          class="youtube-player-container rounded-xl overflow-hidden"
+        >
+          <youtube
+            ref="youtubePlayer"
+            src="https://www.youtube.com/watch?v=oLIkRpKLH1Y"
+            width="100%"
+            height="100%"
+            :style="{ width: '100%', height: '100%' }"
+            @ready="onReady"
+          />
+        </div>
+
+        <div
+          class="text-xl mt-2 p-5 bg-base-200 border border-base-300 rounded-xl"
+        >
+          <span v-for="(line, idx) in visibleLines" :key="idx">
+            <span
+              :class="
+                activeIndex !== -1 && idx === activeIndex % 3
+                  ? 'font-medium underline'
+                  : ''
+              "
+            >
+              {{ line.translation }}
+            </span>
+            {{ " " }}
+          </span>
+        </div>
+        <div class="mt-[10px] p-[10px]">More Content</div>
+      </div>
+
+      <div class="youtube-sidebar border border-base-300 rounded-xl">
+        <div class="h-[500px]">
+          <div class="flex p-2 space-x-2">
+            <button class="btn btn-neutral btn-sm rounded-lg">
+              Transcript
+            </button>
+            <button class="btn btn-sm">Translation</button>
+          </div>
+          <!-- Content for selected tab -->
+          Content goes here
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useRoute } from "vue-router";
 import { ref, reactive, onMounted, onUnmounted, computed } from "vue";
-import VideoLayout1 from "../components/VideoLayout1.vue";
+import type { TranslatedSnippet } from "../types";
+import YouTube from "vue3-youtube";
 
 const route = useRoute();
-
-type TranslatedSnippet = {
-  text: string;
-  translation: string;
-  start: number;
-  end: number;
-  duration: number;
-};
 
 // A ref in Vue 3 is reactive (good for primitives). Whenever its .value changes,
 // Vue automatically re-renders any part of the template or computed properties that depend on it.
@@ -34,6 +70,7 @@ const snippets = reactive<TranslatedSnippet[]>([]);
 const isDragging = ref(false);
 const draggableBox = ref<HTMLElement | null>(null);
 
+const youtube = YouTube;
 let animationFrame: number;
 
 onMounted(async () => {
@@ -76,7 +113,7 @@ onUnmounted(() => {
   cancelAnimationFrame(animationFrame);
 });
 
-const visibleLines = computed(() => {
+const visibleLines = computed<TranslatedSnippet[]>(() => {
   if (activeIndex.value !== -1) {
     return snippets.slice(
       activeIndex.value - (activeIndex.value % 3),
