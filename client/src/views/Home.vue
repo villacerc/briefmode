@@ -4,7 +4,7 @@
       <h1 class="text-accent-content text-5xl mb-2 text-center">
         YouTube Video AI Translator
       </h1>
-      <h2 class="text-accent-content text-md text-center">
+      <h2 class="text-accent-content text-center">
         Watch YouTube videos with accurate, context-aware translations.
       </h2>
       <div class="m-auto max-w-3xl p-2">
