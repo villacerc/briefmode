@@ -1,4 +1,9 @@
 @import "tailwindcss";
+@layer utilities {
+  .debug * {
+    @apply outline outline-1 outline-yellow-500;
+  }
+}
 @plugin "daisyui";
 @plugin "daisyui/theme" {
   name: "unfriendlydonut";
@@ -33,4 +38,43 @@
   --border: 1px;
   --depth: 0;
   --noise: 0;
+}
+
+
+:root {
+  --sidebar-width: 350px;
+  --space-above-player: 75px;
+  --space-below-player: 65px;
+  --max-player-height: calc(100vh - var(--space-above-player) - var(--space-below-player));
+}
+
+.youtube-layout {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
+.youtube-primary {
+  flex: 1;
+}
+
+.youtube-player-container {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: var(--max-player-height);
+}
+
+/* Mobile responsive */
+@media (min-width: 1015px) {
+  .youtube-layout {
+    flex-direction: row;
+  }
+
+  .youtube-sidebar {
+    width: var(--sidebar-width);
+    flex-shrink: 0;
+  }
+
 }
