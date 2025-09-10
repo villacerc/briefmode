@@ -7,7 +7,13 @@ from sqlalchemy.orm import sessionmaker
 # TODO: refactor for other environments
 # Database setup
 DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/briefmode"
-engine = create_engine(DATABASE_URL)
+engine = create_engine(
+    DATABASE_URL,
+    pool_size=10,        # number of persistent connections
+    max_overflow=20,     # how many "extra" connections beyond pool_size
+    pool_timeout=30,     # seconds to wait before giving up
+    pool_pre_ping=True   # makes dead connections auto-reconnect
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 class Base(DeclarativeBase):
