@@ -1,5 +1,8 @@
 <template>
   <div class="my-10 mx-15">
+    <!-- Overlay -->
+    <div v-if="isDragging" class="fixed inset-0 z-50 cursor-grabbing"></div>
+
     <h1 class="text-xl font-medium mb-5 text-accent-content text-center">
       How I Went From Broke To Millionaire in 24 Months
     </h1>
@@ -7,7 +10,12 @@
       <div class="youtube-primary">
         <div
           ref="videoContainer"
-          class="youtube-player-container rounded-xl overflow-hidden"
+          :class="[
+            'overflow-hidden',
+            isFullscreen
+              ? 'fixed inset-0 w-screen h-screen'
+              : 'youtube-player-container rounded-xl',
+          ]"
         >
           <youtube
             ref="youtubePlayer"
@@ -20,8 +28,17 @@
         </div>
 
         <div
-          class="text-xl mt-2 p-5 bg-base-200 border border-base-300 rounded-xl"
+          v-if="!isFullscreen"
+          class="relative group text-xl mt-2 p-5 bg-base-200 border border-base-300 rounded-xl hover:pt-8"
         >
+          <div class="absolute top-2 right-2 hidden group-hover:block">
+            <button
+              @click="isFullscreen = true"
+              class="cursor-pointer text-neutral transition-scale transform hover:scale-110 duration-200"
+            >
+              <FullScreenIcon />
+            </button>
+          </div>
           <span v-for="(line, idx) in visibleLines" :key="idx">
             <span
               :class="
@@ -38,7 +55,47 @@
         <div class="mt-[10px] p-[10px]">More Content</div>
       </div>
 
-      <div class="youtube-sidebar border border-base-300 rounded-xl">
+      <!-- Floating Transcript -->
+      <div
+        ref="draggableBox"
+        v-show="isFullscreen"
+        class="group p-2 bg-black/70 min-h-[2rem] max-h-fit mx-5 fixed rounded-xl bottom-4 w-[calc(100vw-2rem)] text-2xl hover:pt-5 hover:outline hover:outline-white active:outline active:outline-white cursor-grab"
+        :class="[isDragging ? 'pt-5' : '']"
+      >
+        <button
+          class="absolute right-2 top-2 text-white cursor-pointer transition-scale transform hover:scale-90 duration-200"
+          :class="[isDragging ? 'block' : 'hidden group-hover:block']"
+          @click="isFullscreen = false"
+          @mousedown.stop
+        >
+          <DefaultScreenIcon />
+        </button>
+
+        <div>
+          <span
+            v-if="isFullscreen"
+            class="text-white"
+            v-for="(line, idx) in visibleLines"
+            :key="idx"
+          >
+            <span
+              :class="
+                activeIndex !== -1 && idx === activeIndex % 3
+                  ? 'text-secondary'
+                  : ''
+              "
+            >
+              {{ line.translation }}
+            </span>
+            {{ " " }}
+          </span>
+        </div>
+      </div>
+
+      <div
+        v-if="!isFullscreen"
+        class="youtube-sidebar border border-base-300 rounded-xl"
+      >
         <div class="h-[500px]">
           <div class="flex p-2 space-x-2">
             <button class="btn btn-neutral btn-sm rounded-lg">
@@ -58,6 +115,8 @@
 import { useRoute } from "vue-router";
 import { ref, reactive, onMounted, onUnmounted, computed } from "vue";
 import type { TranslatedSnippet } from "../types";
+import FullScreenIcon from "../icons/FullScreen.vue";
+import DefaultScreenIcon from "../icons/DefaultScreen.vue";
 import YouTube from "vue3-youtube";
 
 const route = useRoute();
@@ -69,6 +128,7 @@ const activeIndex = ref<number>(-1);
 const snippets = reactive<TranslatedSnippet[]>([]);
 const isDragging = ref(false);
 const draggableBox = ref<HTMLElement | null>(null);
+const isFullscreen = ref(false);
 
 const youtube = YouTube;
 let animationFrame: number;
@@ -88,8 +148,20 @@ onMounted(async () => {
 
     document.addEventListener("mousemove", (e) => {
       if (!isDragging.value) return;
-      el.style.left = e.clientX - offsetX + "px";
-      el.style.top = e.clientY - offsetY + "px";
+
+      // Calculate new position
+      let newLeft = e.clientX - offsetX;
+      let newTop = e.clientY - offsetY;
+
+      // Clamp so it stays in viewport
+      const maxLeft = window.innerWidth - el.offsetWidth;
+      const maxTop = window.innerHeight - el.offsetHeight;
+
+      newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+      newTop = Math.max(0, Math.min(newTop, maxTop));
+
+      el.style.left = newLeft + "px";
+      el.style.top = newTop + "px";
     });
 
     document.addEventListener("mouseup", () => {
