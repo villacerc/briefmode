@@ -128,7 +128,9 @@ def get_transcript(source_id: str) -> List[TranscriptSnippet]:
             return video.transcript_snippets
 
         # Fetch from API
-        transcript_data = ytt_api.fetch(source_id)
+        transcript_list = ytt_api.list(source_id)
+        first_transcript = next(iter(transcript_list))
+        transcript_data = ytt_api.fetch(source_id, languages=[first_transcript.language_code])
 
         # Ensure language exists
         language = get_language_by_code(transcript_data.language_code)
@@ -249,27 +251,28 @@ async def get_translations(snippets: List[TranscriptSnippet], lang: Language, co
     # Create a semaphore to limit concurrency to avoid overloading API and database
     semaphore = asyncio.Semaphore(concurrency)
 
-    async def worker(snippet, db):
+    async def worker(snippet):
         async with semaphore:
-            translation = await get_translation(snippet, lang, db)
-            return asdict(TranslatedSnippet(
-                text=snippet.text,
-                translation=translation.text,
-                start=snippet.start,
-                end=snippet.end,
-                duration=snippet.duration
-            ))
+            db = next(get_db())  # fresh session per task
+            try:
+                translation = await get_translation(snippet, lang, db)
+                return asdict(TranslatedSnippet(
+                    text=snippet.text,
+                    translation=translation.text,
+                    start=snippet.start,
+                    end=snippet.end,
+                    duration=snippet.duration
+                ))
+            finally:
+                db.close()
 
     try:
-        db = next(get_db())
         # Return a list of all translated snippets in same order
         # * unpacks the iterable into individual arguments for a function.
         # eg. (worker(a), worker(b), worker(c))
-        return await asyncio.gather(*(worker(s, db) for s in snippets))
+        return await asyncio.gather(*(worker(s) for s in snippets))
     except Exception as e:
         raise RuntimeError(f"Error occurred while translating snippets. {e}")
-    finally:
-        db.close()
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)

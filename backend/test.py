@@ -71,9 +71,14 @@ async def main():
 
     ytt_api = YouTubeTranscriptApi()
     
-    transcript = ytt_api.fetch("oLIkRpKLH1Y")
-    input_list = [snippet.text for snippet in transcript.snippets]
-    print(input_list)
+    transcript_list = ytt_api.list("2wlMlDON1rg")
+    first_transcript = next(iter(transcript_list))  # <-- use iter() + next()
+    transcript = ytt_api.fetch("2wlMlDON1rg", languages=[first_transcript.language_code])
+    print(transcript)
+    # for t in transcripts:
+    #     print(t.language_code, t.language, t.is_generated)
+    # input_list = [snippet.text for snippet in transcript.snippets]
+    # print(input_list)
 
     # translate_chunk(input_list[:15])
     # batch_translations(input_list)

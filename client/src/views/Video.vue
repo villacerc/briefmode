@@ -19,7 +19,7 @@
         >
           <youtube
             ref="youtubePlayer"
-            src="https://www.youtube.com/watch?v=oLIkRpKLH1Y"
+            src="https://www.youtube.com/watch?v=2wlMlDON1rg"
             width="100%"
             height="100%"
             :style="{ width: '100%', height: '100%' }"
