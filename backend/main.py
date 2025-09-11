@@ -15,7 +15,7 @@ import json
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, Session
 from sqlalchemy.exc import SQLAlchemyError
-from models import TranscriptSnippet, Video, Language, Translation
+from models import TranscriptSnippet, Video, Language, Translation, Word, TranslationSnippet
 from database import get_db
 import logging
 
@@ -47,9 +47,21 @@ async_openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 translation_rules = os.getenv("TRANSLATION_RULES", "")
 
 @dataclass
+class TranslationPart:
+    translation: str
+    romanized: str
+
+@dataclass
+class WordPart:
+    word: str
+    romanized: str
+    order_index: int
+    translations: List[TranslationPart]
+
+@dataclass
 class TranslatedSnippet:
     text: str
-    translation: str
+    parts: List[WordPart]
     start: float
     end: float
     duration: float
@@ -184,13 +196,13 @@ async def stream_translations(transcript: List[TranscriptSnippet], lang: Languag
             yield json.dumps({
                 "message": "Chunk translated",
                 "data": translated_chunk
-            }) + "\n"
+            }, ensure_ascii=False) + "\n"
         except Exception as e:
             yield json.dumps({
                 "message": "Failed to translate chunk",
                 "chunk_index": i,
                 "error": str(e)
-            }) + "\n"
+            }, ensure_ascii=False) + "\n"
 
 # Retry a coroutine with exponential backoff
 # coro is a coroutine AKA async function
@@ -207,9 +219,9 @@ async def retry_with_backoff(coro, retries=5, base_delay=1):
 
 async def get_translation(snippet: TranscriptSnippet, lang: Language, db: Session):
     try:
-        translation = db.query(Translation).filter(
-            Translation.snippet_id == snippet.id,
-            Translation.language_id == lang.id
+        translation = db.query(TranslationSnippet).filter(
+            TranslationSnippet.transcript_snippet_id == snippet.id,
+            TranslationSnippet.language_id == lang.id
         ).first()
 
         if translation:
@@ -221,28 +233,73 @@ async def get_translation(snippet: TranscriptSnippet, lang: Language, db: Sessio
                 input=f"""
                 Translate the input below to {lang.name}.
                 Rules:
-                - Do not add explanations or ellipsis.
-                - Capitalize the first word **only if it is required by grammar**.
-                - Respond with only the translation.
-                input:
+                    1. Do not add explanations, ellipsis, or commentary.
+                    2. Capitalize the first word only if required by grammar.
+                    3. Respond ONLY with valid JSON, no extra text.
+                    4. For each part of the input (each word), include:
+                        "word": the original word as written in the input.
+                        "romanized": the romanized form of the original word only if its script is not Latin (e.g., Arabic, Japanese, Chinese). If it is already in Latin script, use an empty string.
+                        "translations": an array containing the main translation first, followed by up to 3 alternative translations (maximum 4 items total). Each object inside "translations" should have:
+                            "translation": the translated word.
+                            "romanized_translation": the romanized form of the translated word only if its script is not Latin. If the translated word is in Latin script, use an empty string.
+                Output format:
+                {{
+                "translation": "<full translated sentence here>",
+                "word_parts": [
+                    {{
+                    "word": "<original word>",
+                    "romanized": "<romanized form of the original word or '' if Latin>",
+                    "translations": [
+                        {{
+                        "translation": "<translated word>",
+                        "romanized_translation": "<romanized form of the translated word or '' if Latin>"
+                        }}
+                    ]
+                    }}
+                ]
+                }}
+                Input:
                 {snippet.text}""",
                 store=False,
             )
         )
 
-        translation = Translation(
-            snippet_id=snippet.id,
+        raw_text = response.output[0].content[0].text.strip()
+        parsed = json.loads(raw_text)
+
+        translation = TranslationSnippet(
+            transcript_snippet_id=snippet.id,
             language_id=lang.id,
-            text=response.output[0].content[0].text
+            text=parsed["translation"]
         )
         db.add(translation)
+        db.commit()
+        db.refresh(translation)
+        for i, part in enumerate(parsed.get("word_parts", [])):
+            word_part = Word(
+                text=part["word"],
+                romanized=part["romanized"],
+                transcript_snippet_id=snippet.id,
+                order_index=i
+            )
+            db.add(word_part)
+            db.commit()
+            db.refresh(word_part)
+            for tpart in part.get("translations", []):
+                word_translation = Translation(
+                    text=tpart["translation"],
+                    romanized=tpart["romanized_translation"],
+                    word_id=word_part.id,
+                    translation_snippet_id=translation.id
+                )
+                db.add(word_translation)
         db.commit()
 
         return translation
     except Exception as e:
         logger.error(f"Failed to translate snippet (id: {snippet.id}). {str(e)}")
-        return Translation(
-            snippet_id=snippet.id,
+        return TranslationSnippet(
+            transcript_snippet_id=snippet.id,
             language_id=lang.id,
             text="< >"
         )
@@ -251,28 +308,42 @@ async def get_translations(snippets: List[TranscriptSnippet], lang: Language, co
     # Create a semaphore to limit concurrency to avoid overloading API and database
     semaphore = asyncio.Semaphore(concurrency)
 
-    async def worker(snippet):
+    async def worker(snippet, db):
         async with semaphore:
-            db = next(get_db())  # fresh session per task
-            try:
-                translation = await get_translation(snippet, lang, db)
-                return asdict(TranslatedSnippet(
-                    text=snippet.text,
-                    translation=translation.text,
-                    start=snippet.start,
-                    end=snippet.end,
-                    duration=snippet.duration
+            translation = await get_translation(snippet, lang, db)
+            words = db.query(Word).filter(Word.transcript_snippet_id == snippet.id).order_by(Word.order_index).all()
+            word_parts = []
+            for word in words:
+                word_parts.append(WordPart(
+                    word=word.text,
+                    romanized=word.romanized,
+                    order_index=word.order_index,
+                    translations=[
+                        TranslationPart(
+                            translation=t.text,
+                            romanized=t.romanized
+                        )
+                        for t in word.translations
+                    ]
                 ))
-            finally:
-                db.close()
+            return asdict(TranslatedSnippet(
+                text=translation.text,
+                parts=word_parts,
+                start=snippet.start,
+                end=snippet.end,
+                duration=snippet.duration
+            ))
 
     try:
         # Return a list of all translated snippets in same order
         # * unpacks the iterable into individual arguments for a function.
         # eg. (worker(a), worker(b), worker(c))
-        return await asyncio.gather(*(worker(s) for s in snippets))
+        db = next(get_db())
+        return await asyncio.gather(*(worker(s, db) for s in snippets))
     except Exception as e:
         raise RuntimeError(f"Error occurred while translating snippets. {e}")
+    finally:
+        db.close()
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)

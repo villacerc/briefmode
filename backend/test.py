@@ -69,22 +69,61 @@ def chunk_list(lst, chunk_size):
 
 async def main():
 
-    ytt_api = YouTubeTranscriptApi()
-    
-    transcript_list = ytt_api.list("2wlMlDON1rg")
-    first_transcript = next(iter(transcript_list))  # <-- use iter() + next()
-    transcript = ytt_api.fetch("2wlMlDON1rg", languages=[first_transcript.language_code])
-    print(transcript)
-    # for t in transcripts:
-    #     print(t.language_code, t.language, t.is_generated)
-    # input_list = [snippet.text for snippet in transcript.snippets]
-    # print(input_list)
+    response = await async_openai_client.responses.create(
+                model="gpt-4.1-nano",
+                input=f"""
+                Translate the input below to English.
+                Rules:
+                    1. Do not add explanations, ellipsis, or commentary.
+                    2. Capitalize the first word only if required by grammar.
+                    3. Respond ONLY with valid JSON, no extra text.
+                    4. For each part of the input (each word), include:
+                        "word": the original word as written in the input.
+                        "romanized": the romanized form of the original word only if its script is not Latin (e.g., Arabic, Japanese, Chinese). If it is already in Latin script, use an empty string.
+                        "translations": an array containing the main translation first, followed by up to 3 alternative translations (maximum 4 items total). Each object inside "translations" should have:
+                            "translation": the translated word.
+                            "romanized": the romanized form of the translated word only if its script is not Latin. If the translated word is in Latin script, use an empty string.
+                Output format:
+                {{
+                "translation": "<full translated sentence here>",
+                "word_parts": [
+                    {{
+                    "word": "<original word>",
+                    "romanized": "<romanized form of the original word or '' if Latin>",
+                    "translations": [
+                        {{
+                        "translation": "<translated word>",
+                        "romanized": "<romanized form of the translated word or '' if Latin>"
+                        }}
+                    ]
+                    }}
+                ]
+                }}
+                Input:
+                私はコーヒーが大好きです""",
+                store=False,
+            )
 
-    # translate_chunk(input_list[:15])
-    # batch_translations(input_list)
-    # translations = await translate_transcript(input_list, concurrency=20)
-    # for i,t in enumerate(translations):
-    #     print(f"{i + 1}. {t}")
+    raw_text = response.output[0].content[0].text.strip()
+
+    try:
+        parsed = json.loads(raw_text)
+        print(json.dumps(parsed, indent=2, ensure_ascii=False))
+
+        # print(parsed["translation"])
+        # for part in parsed["translated_parts"]:
+        #     print(part["word"], "→", part["translations"])
+    except json.JSONDecodeError as e:
+        print("Failed to parse JSON:", e)
+        print("Raw response:", raw_text)
+        raise RuntimeError("Something went wrong with the translation response")
+
+    # ytt_api = YouTubeTranscriptApi()
+    
+    # transcript_list = ytt_api.list("2wlMlDON1rg")
+    # first_transcript = next(iter(transcript_list))  # <-- use iter() + next()
+    # transcript = ytt_api.fetch("2wlMlDON1rg", languages=[first_transcript.language_code])
+    # print(transcript)
 
 def batch_translations(input_list):
     # input_lines = "\n".join([snippet.text for snippet in input_list])

@@ -14,7 +14,12 @@ engine = create_engine(
     pool_timeout=30,     # seconds to wait before giving up
     pool_pre_ping=True   # makes dead connections auto-reconnect
 )
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = sessionmaker(
+    autocommit=False, 
+    autoflush=False, 
+    expire_on_commit=False, 
+    bind=engine
+)
 
 class Base(DeclarativeBase):
     pass
