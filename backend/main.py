@@ -18,6 +18,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from models import TranscriptSnippet, Video, Language, Translation, Word
 from database import get_db
 import logging
+import re
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("uvicorn")
@@ -163,6 +164,10 @@ def get_transcript(source_id: str) -> List[TranscriptSnippet]:
         # Save all snippets at once
         transcript = []
         for i, item in enumerate(transcript_data.snippets):
+            # Skip snippets that are only annotations in brackets
+            if re.match(r"^\[.*\]$", item.text.strip()):
+                continue
+
             snippet = TranscriptSnippet(
                 video_id=video.id,
                 text=item.text,
