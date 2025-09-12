@@ -59,6 +59,14 @@ class WordPart:
     order_index: int
     translations: List[TranslationPart]
 
+@dataclass 
+class TranslatedSnippet:
+    snippet_text: str
+    start: float
+    end: float
+    duration: float
+    word_parts: List[WordPart]
+
 
 # API Routes
 @app.get("/", summary="Health Check")
@@ -213,7 +221,7 @@ async def retry_with_backoff(coro, retries=5, base_delay=1):
 from sqlalchemy.orm import contains_eager
 
 async def get_normalized_translated_snippet(snippet: TranscriptSnippet, lang: Language, db: Session):
-    try: 
+    try:
         words = (
             db.query(Word)
               .join(Translation)
@@ -226,7 +234,7 @@ async def get_normalized_translated_snippet(snippet: TranscriptSnippet, lang: La
               .all()
         )
 
-        translated_transcript: List[WordPart] = []
+        word_parts: List[WordPart] = []
 
         for word in words:
             translation_parts: List[TranslationPart] = [
@@ -243,9 +251,15 @@ async def get_normalized_translated_snippet(snippet: TranscriptSnippet, lang: La
                 translations=translation_parts,
                 order_index=word.order_index
             )
-            translated_transcript.append(asdict(word_part))
+            word_parts.append(word_part)
 
-        return translated_transcript
+        return TranslatedSnippet(
+            snippet_text=snippet.text,
+            start=snippet.start,
+            end=snippet.end,
+            duration=snippet.duration,
+            word_parts=word_parts
+        )
     except Exception as e:
         raise RuntimeError(f"Failed to normalize translated snippet. {str(e)}") from e
 
@@ -334,7 +348,7 @@ async def get_translations(snippets: List[TranscriptSnippet], lang: Language, co
     async def worker(snippet, db):
         async with semaphore:
             translated_snippet = await get_translated_snippet(snippet, lang, db)
-            return translated_snippet
+            return asdict(translated_snippet)
 
     try:
         # Return a list of all translated snippets in same order
