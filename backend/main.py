@@ -15,7 +15,7 @@ import json
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, Session
 from sqlalchemy.exc import SQLAlchemyError
-from models import TranscriptSnippet, Video, Language, Translation, Word, TranslationSnippet
+from models import TranscriptSnippet, Video, Language, Translation, Word
 from database import get_db
 import logging
 
@@ -50,6 +50,7 @@ translation_rules = os.getenv("TRANSLATION_RULES", "")
 class TranslationPart:
     translation: str
     romanized: str
+    order_index: int
 
 @dataclass
 class WordPart:
@@ -58,13 +59,6 @@ class WordPart:
     order_index: int
     translations: List[TranslationPart]
 
-@dataclass
-class TranslatedSnippet:
-    text: str
-    parts: List[WordPart]
-    start: float
-    end: float
-    duration: float
 
 # API Routes
 @app.get("/", summary="Health Check")
@@ -214,19 +208,59 @@ async def retry_with_backoff(coro, retries=5, base_delay=1):
             if attempt == retries - 1:
                 raise RuntimeError(f"Operation failed after {retries} attempts. {str(e)}") from e
             delay = base_delay * (2 ** attempt) + random.uniform(0, 0.5)
-            print(f"Retrying in {delay:.1f}s after error: {e}")
             await asyncio.sleep(delay)
 
-async def get_translation(snippet: TranscriptSnippet, lang: Language, db: Session):
-    try:
-        translation = db.query(TranslationSnippet).filter(
-            TranslationSnippet.transcript_snippet_id == snippet.id,
-            TranslationSnippet.language_id == lang.id
-        ).first()
+from sqlalchemy.orm import contains_eager
 
-        if translation:
-            return translation
-    
+async def get_normalized_translated_snippet(snippet: TranscriptSnippet, lang: Language, db: Session):
+    try: 
+        words = (
+            db.query(Word)
+              .join(Translation)
+              .filter(
+                  Word.transcript_snippet_id == snippet.id,
+                  Translation.language_id == lang.id
+              )
+              .options(contains_eager(Word.translations))
+              .order_by(Word.order_index, Translation.order_index)
+              .all()
+        )
+
+        translated_transcript: List[WordPart] = []
+
+        for word in words:
+            translation_parts: List[TranslationPart] = [
+                TranslationPart(
+                    translation=t.text,
+                    romanized=t.romanized,
+                    order_index=t.order_index
+                )
+                for t in word.translations
+            ]
+            word_part = WordPart(
+                word=word.text,
+                romanized=word.romanized,
+                translations=translation_parts,
+                order_index=word.order_index
+            )
+            translated_transcript.append(asdict(word_part))
+
+        return translated_transcript
+    except Exception as e:
+        raise RuntimeError(f"Failed to normalize translated snippet. {str(e)}") from e
+
+
+async def get_translated_snippet(snippet: TranscriptSnippet, lang: Language, db: Session):
+    try:
+        # check if translation already exists
+        has_translation = db.query(Translation).join(Word).filter(
+            Word.transcript_snippet_id == snippet.id,
+            Translation.language_id == lang.id
+        ).first() is not None
+
+        if has_translation:
+            return await get_normalized_translated_snippet(snippet, lang, db)
+
         response = await retry_with_backoff(
             async_openai_client.responses.create(
                 model="gpt-4.1-nano",
@@ -239,7 +273,7 @@ async def get_translation(snippet: TranscriptSnippet, lang: Language, db: Sessio
                     4. For each part of the input (each word), include:
                         "word": the original word as written in the input.
                         "romanized": the romanized form of the original word only if its script is not Latin (e.g., Arabic, Japanese, Chinese). If it is already in Latin script, use an empty string.
-                        "translations": an array containing the main translation first, followed by up to 3 alternative translations (maximum 4 items total). Each object inside "translations" should have:
+                        "translations": an array containing the main translation first, followed by up to 2 alternative translations (maximum 3 items total). Each object inside "translations" should have:
                             "translation": the translated word.
                             "romanized_translation": the romanized form of the translated word only if its script is not Latin. If the translated word is in Latin script, use an empty string.
                 Output format:
@@ -267,14 +301,6 @@ async def get_translation(snippet: TranscriptSnippet, lang: Language, db: Sessio
         raw_text = response.output[0].content[0].text.strip()
         parsed = json.loads(raw_text)
 
-        translation = TranslationSnippet(
-            transcript_snippet_id=snippet.id,
-            language_id=lang.id,
-            text=parsed["translation"]
-        )
-        db.add(translation)
-        db.commit()
-        db.refresh(translation)
         for i, part in enumerate(parsed.get("word_parts", [])):
             word_part = Word(
                 text=part["word"],
@@ -285,54 +311,30 @@ async def get_translation(snippet: TranscriptSnippet, lang: Language, db: Sessio
             db.add(word_part)
             db.commit()
             db.refresh(word_part)
-            for tpart in part.get("translations", []):
+            for j, tpart in enumerate(part.get("translations", [])):
                 word_translation = Translation(
                     text=tpart["translation"],
                     romanized=tpart["romanized_translation"],
                     word_id=word_part.id,
-                    translation_snippet_id=translation.id
+                    language_id=lang.id,
+                    order_index=j
                 )
                 db.add(word_translation)
         db.commit()
 
-        return translation
+        return await get_normalized_translated_snippet(snippet, lang, db)
     except Exception as e:
         logger.error(f"Failed to translate snippet (id: {snippet.id}). {str(e)}")
-        return TranslationSnippet(
-            transcript_snippet_id=snippet.id,
-            language_id=lang.id,
-            text="< >"
-        )
+        return []
 
-async def get_translations(snippets: List[TranscriptSnippet], lang: Language, concurrency=10) -> List[TranslatedSnippet]:
+async def get_translations(snippets: List[TranscriptSnippet], lang: Language, concurrency=10) -> List[WordPart]:
     # Create a semaphore to limit concurrency to avoid overloading API and database
     semaphore = asyncio.Semaphore(concurrency)
 
     async def worker(snippet, db):
         async with semaphore:
-            translation = await get_translation(snippet, lang, db)
-            words = db.query(Word).filter(Word.transcript_snippet_id == snippet.id).order_by(Word.order_index).all()
-            word_parts = []
-            for word in words:
-                word_parts.append(WordPart(
-                    word=word.text,
-                    romanized=word.romanized,
-                    order_index=word.order_index,
-                    translations=[
-                        TranslationPart(
-                            translation=t.text,
-                            romanized=t.romanized
-                        )
-                        for t in word.translations
-                    ]
-                ))
-            return asdict(TranslatedSnippet(
-                text=translation.text,
-                parts=word_parts,
-                start=snippet.start,
-                end=snippet.end,
-                duration=snippet.duration
-            ))
+            translated_snippet = await get_translated_snippet(snippet, lang, db)
+            return translated_snippet
 
     try:
         # Return a list of all translated snippets in same order
