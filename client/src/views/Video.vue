@@ -40,8 +40,17 @@
             </button>
           </div>
           <span v-for="(line, i) in visibleLines" :key="i">
-            <span v-for="(part, j) in line.snippet_words" :key="j">
-              {{ part.text }}
+            <span
+              class="inline-block"
+              v-for="(part, j) in line.snippet_words"
+              :key="j"
+            >
+              <span class="block text-sm">
+                {{ removeAnnotations(part.romanized) }}
+              </span>
+              <span class="block">
+                {{ part.text }}
+              </span>
               <span v-if="languageUsesSpaces(line.transcript_language)">
                 {{ " " }}
               </span>
@@ -201,6 +210,10 @@ onUnmounted(() => {
 });
 
 const isAnnotation = (text: string) => /^\s*[\[\(].+[\]\)]\s*$/u.test(text);
+
+const removeAnnotations = (text: string) => {
+  return text.replace(/[\[\(].+?[\]\)]/gu, "").trim();
+};
 
 const visibleLines = computed<TranslatedSnippet[]>(() => {
   if (activeIndex.value === -1) return [];

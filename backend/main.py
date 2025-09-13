@@ -49,7 +49,6 @@ translation_rules = os.getenv("TRANSLATION_RULES", "")
 @dataclass
 class WordTranslation:
     text: str
-    romanized: str
     order_index: int
 
 @dataclass
@@ -242,7 +241,6 @@ async def get_normalized_translated_snippet(snippet: TranscriptSnippet, lang: La
             translations: List[WordTranslation] = [
                 WordTranslation(
                     text=t.text,
-                    romanized=t.romanized,
                     order_index=t.order_index
                 )
                 for t in word.translations
@@ -271,7 +269,7 @@ async def get_normalized_translated_snippet(snippet: TranscriptSnippet, lang: La
 
 async def get_translated_snippet(snippet: TranscriptSnippet, lang: Language, db: Session):
     try:
-        # check if translation already exists
+        # Check if translation already exists
         has_translation = db.query(Translation).join(Word).filter(
             Word.transcript_snippet_id == snippet.id,
             Translation.language_id == lang.id
@@ -280,46 +278,55 @@ async def get_translated_snippet(snippet: TranscriptSnippet, lang: Language, db:
         if has_translation:
             return await get_normalized_translated_snippet(snippet, lang, db)
 
-        response = await retry_with_backoff(
-            async_openai_client.responses.create(
-                model="gpt-4.1-nano",
-                input=f"""
-                Translate the input below to {lang.name}.
-                Rules:
-                    1. Respond ONLY with valid JSON, no extra text.
+        max_retries = 3
+        for attempt in range(max_retries):
+            # Call the AI model
+            response = await retry_with_backoff(
+                async_openai_client.responses.create(
+                    model="gpt-4.1-nano",
+                    input=f"""
+                    Translate the input below to {lang.name}.
+                    Rules:
+                    1. Respond ONLY with valid JSON. Do NOT include explanations, comments, or extra text.
                     2. Capitalize the first word only if required by grammar.
-                    3. Respond ONLY with valid JSON, no extra text.
-                    4. For each part of the input (each word), include:
-                        "word": the original word as written in the input, including punctuation.
-                        "romanized": the romanized form of the original word only if its script is not Latin (e.g., Arabic, Japanese, Chinese). If it is already in Latin script, use an empty string.
-                        "translations": an array containing the main translation first, followed by up to 2 alternative translations (maximum 3 items total). Each object inside "translations" should have:
-                            "translation": the translated word.
-                            "romanized_translation": the romanized form of the translated word only if its script is not Latin. If the translated word is in Latin script, use an empty string.
-                Output format:
-                {{
-                "translation": "<full translated sentence here>",
-                "word_parts": [
+                    3. Break down input into individual words or tokens, including:
+                       - "word": original word
+                       - "romanized": Latin script romanization, "" if already Latin
+                       - "translations": main translation first, up to 2 alternatives
+                    4. "romanized" must never contain non-Latin characters.
+                    5. Use properly formatted JSON, double quotes, no trailing commas.
+
+                    Output JSON format:
+
                     {{
-                    "word": "<original word>",
-                    "romanized": "<romanized form of the original word or '' if Latin>",
-                    "translations": [
+                      "translation": "<full translated sentence here>",
+                      "word_parts": [
                         {{
-                        "translation": "<translated word>",
-                        "romanized_translation": "<romanized form of the translated word or '' if Latin>"
+                          "word": "<original word>",
+                          "romanized": "<romanized form in Latin or ''>",
+                          "translations": [{{ "translation": "<translated word>" }}]
                         }}
-                    ]
+                      ]
                     }}
-                ]
-                }}
-                Input:
-                {snippet.text}""",
-                store=False,
+
+                    Input:
+                    {snippet.text}
+                    """,
+                    store=False
+                )
             )
-        )
 
-        raw_text = response.output[0].content[0].text.strip()
-        parsed = json.loads(raw_text)
+            raw_text = response.output[0].content[0].text.strip()
+            try:
+                parsed = json.loads(raw_text)
+                break  # Successfully parsed, exit retry loop
+            except json.JSONDecodeError:
+                logger.warning(f"Attempt {attempt + 1}/{max_retries} failed to parse JSON. Retrying...")
+                if attempt == max_retries - 1:
+                    raise
+                await asyncio.sleep(1)  # optional small delay
 
+        # Save parsed data to the database
         transcript_snippet = TranslationSnippet(
             text=parsed.get("translation", ""),
             transcript_snippet_id=snippet.id,
@@ -340,7 +347,6 @@ async def get_translated_snippet(snippet: TranscriptSnippet, lang: Language, db:
             for j, tpart in enumerate(part.get("translations", [])):
                 word_translation = Translation(
                     text=tpart["translation"],
-                    romanized=tpart["romanized_translation"],
                     word_id=word_part.id,
                     language_id=lang.id,
                     order_index=j
@@ -349,9 +355,10 @@ async def get_translated_snippet(snippet: TranscriptSnippet, lang: Language, db:
         db.commit()
 
         return await get_normalized_translated_snippet(snippet, lang, db)
+
     except Exception as e:
         logger.error(f"Failed to translate snippet (id: {snippet.id}). {str(e)}")
-        return []
+        return {}
 
 async def get_translations(snippets: List[TranscriptSnippet], lang: Language, concurrency=10) -> List[TranslatedSnippet]:
     # Create a semaphore to limit concurrency to avoid overloading API and database

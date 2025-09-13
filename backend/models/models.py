@@ -75,7 +75,6 @@ class Translation(Base):
     word_id = Column(Integer, ForeignKey("words.id", ondelete="CASCADE"), nullable=False)
     language_id = Column(Integer, ForeignKey("languages.id"), nullable=False)
     text = Column(Text, nullable=False)
-    romanized = Column(String(255))
     order_index = Column(Integer, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
 

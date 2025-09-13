@@ -18,6 +18,5 @@ export type SnippetWord = {
 
 export type Translation = {
   text: string;
-  romanized: string;
   order_index: number;
 }
