@@ -15,10 +15,9 @@ import json
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, Session
 from sqlalchemy.exc import SQLAlchemyError
-from models import TranscriptSnippet, Video, Language, Translation, Word
+from models import TranscriptSnippet, Video, Language, Translation, Word, TranslationSnippet
 from database import get_db
 import logging
-import re
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("uvicorn")
@@ -48,26 +47,28 @@ async_openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 translation_rules = os.getenv("TRANSLATION_RULES", "")
 
 @dataclass
-class TranslationPart:
-    translation: str
+class WordTranslation:
+    text: str
     romanized: str
     order_index: int
 
 @dataclass
-class WordPart:
-    word: str
+class SnippetWord:
+    text: str
     romanized: str
     order_index: int
-    translations: List[TranslationPart]
+    translations: List[WordTranslation]
 
-@dataclass 
+@dataclass
 class TranslatedSnippet:
-    snippet_text: str
+    text: str
+    translation: float
+    transcript_language: str
+    translation_language: str
     start: float
     end: float
     duration: float
-    word_parts: List[WordPart]
-
+    snippet_words: List[SnippetWord]
 
 # API Routes
 @app.get("/", summary="Health Check")
@@ -88,7 +89,7 @@ def get_video(source_id: str, lang: str):
             raise ValueError(f"Language with code '{lang}' not found.")
 
         transcript = get_transcript(source_id)
-        translations_generator = stream_translations(transcript, translation_lang)
+        translations_generator = stream_translations(transcript[:15], translation_lang)
 
         return StreamingResponse(translations_generator, media_type="application/json")
     except Exception as e:
@@ -164,10 +165,6 @@ def get_transcript(source_id: str) -> List[TranscriptSnippet]:
         # Save all snippets at once
         transcript = []
         for i, item in enumerate(transcript_data.snippets):
-            # Skip snippets that are only annotations in brackets
-            if re.match(r"^\[.*\]$", item.text.strip()):
-                continue
-
             snippet = TranscriptSnippet(
                 video_id=video.id,
                 text=item.text,
@@ -227,44 +224,47 @@ from sqlalchemy.orm import contains_eager
 
 async def get_normalized_translated_snippet(snippet: TranscriptSnippet, lang: Language, db: Session):
     try:
-        words = (
-            db.query(Word)
-              .join(Translation)
-              .filter(
-                  Word.transcript_snippet_id == snippet.id,
-                  Translation.language_id == lang.id
-              )
-              .options(contains_eager(Word.translations))
-              .order_by(Word.order_index, Translation.order_index)
-              .all()
-        )
+        words = db.query(Word).join(Translation).filter(
+            Word.transcript_snippet_id == snippet.id,
+            Translation.language_id == lang.id
+        ).options(contains_eager(Word.translations)).all()
 
-        word_parts: List[WordPart] = []
+        translation_snippet = db.query(TranslationSnippet).filter(
+            TranslationSnippet.transcript_snippet_id == snippet.id,
+            TranslationSnippet.language_id == lang.id
+        ).first()
+
+        video = db.query(Video).filter(Video.id == snippet.video_id).first()
+
+        snippet_words: List[SnippetWord] = []
 
         for word in words:
-            translation_parts: List[TranslationPart] = [
-                TranslationPart(
-                    translation=t.text,
+            translations: List[WordTranslation] = [
+                WordTranslation(
+                    text=t.text,
                     romanized=t.romanized,
                     order_index=t.order_index
                 )
                 for t in word.translations
             ]
-            word_part = WordPart(
-                word=word.text,
+            snippet_word = SnippetWord(
+                text=word.text,
                 romanized=word.romanized,
-                translations=translation_parts,
+                translations=translations,
                 order_index=word.order_index
             )
-            word_parts.append(word_part)
+            snippet_words.append(snippet_word)
 
-        return TranslatedSnippet(
-            snippet_text=snippet.text,
+        return asdict(TranslatedSnippet(
+            text=snippet.text,
+            translation=translation_snippet.text,
+            transcript_language=video.language.code,
+            translation_language=lang.code,
             start=snippet.start,
             end=snippet.end,
             duration=snippet.duration,
-            word_parts=word_parts
-        )
+            snippet_words=snippet_words
+        ))
     except Exception as e:
         raise RuntimeError(f"Failed to normalize translated snippet. {str(e)}") from e
 
@@ -286,11 +286,11 @@ async def get_translated_snippet(snippet: TranscriptSnippet, lang: Language, db:
                 input=f"""
                 Translate the input below to {lang.name}.
                 Rules:
-                    1. Do not add explanations, ellipsis, or commentary.
+                    1. Respond ONLY with valid JSON, no extra text.
                     2. Capitalize the first word only if required by grammar.
                     3. Respond ONLY with valid JSON, no extra text.
                     4. For each part of the input (each word), include:
-                        "word": the original word as written in the input.
+                        "word": the original word as written in the input, including punctuation.
                         "romanized": the romanized form of the original word only if its script is not Latin (e.g., Arabic, Japanese, Chinese). If it is already in Latin script, use an empty string.
                         "translations": an array containing the main translation first, followed by up to 2 alternative translations (maximum 3 items total). Each object inside "translations" should have:
                             "translation": the translated word.
@@ -320,6 +320,13 @@ async def get_translated_snippet(snippet: TranscriptSnippet, lang: Language, db:
         raw_text = response.output[0].content[0].text.strip()
         parsed = json.loads(raw_text)
 
+        transcript_snippet = TranslationSnippet(
+            text=parsed.get("translation", ""),
+            transcript_snippet_id=snippet.id,
+            language_id=lang.id,
+        )
+        db.add(transcript_snippet)
+
         for i, part in enumerate(parsed.get("word_parts", [])):
             word_part = Word(
                 text=part["word"],
@@ -346,14 +353,14 @@ async def get_translated_snippet(snippet: TranscriptSnippet, lang: Language, db:
         logger.error(f"Failed to translate snippet (id: {snippet.id}). {str(e)}")
         return []
 
-async def get_translations(snippets: List[TranscriptSnippet], lang: Language, concurrency=10) -> List[WordPart]:
+async def get_translations(snippets: List[TranscriptSnippet], lang: Language, concurrency=10) -> List[TranslatedSnippet]:
     # Create a semaphore to limit concurrency to avoid overloading API and database
     semaphore = asyncio.Semaphore(concurrency)
 
     async def worker(snippet, db):
         async with semaphore:
             translated_snippet = await get_translated_snippet(snippet, lang, db)
-            return asdict(translated_snippet)
+            return translated_snippet
 
     try:
         # Return a list of all translated snippets in same order

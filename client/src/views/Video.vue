@@ -19,7 +19,7 @@
         >
           <youtube
             ref="youtubePlayer"
-            src="https://www.youtube.com/watch?v=2wlMlDON1rg"
+            src="https://www.youtube.com/watch?v=qzzweIQoIOU"
             width="100%"
             height="100%"
             :style="{ width: '100%', height: '100%' }"
@@ -29,7 +29,7 @@
 
         <div
           v-if="!isFullscreen"
-          class="relative group text-xl mt-2 p-5 bg-base-200 border border-base-300 rounded-xl hover:pt-8"
+          class="text-center relative group text-xl mt-2 px-5 py-2 bg-base-200 border border-base-300 rounded-xl hover:pt-8"
         >
           <div class="absolute top-2 right-2 hidden group-hover:block">
             <button
@@ -39,17 +39,32 @@
               <FullScreenIcon />
             </button>
           </div>
-          <span v-for="(line, idx) in visibleLines" :key="idx">
-            <span
-              :class="
-                activeIndex !== -1 && idx === activeIndex % 3
-                  ? 'font-medium underline'
-                  : ''
-              "
-            >
-              {{ line.translation }}
+          <span v-for="(line, i) in visibleLines" :key="i">
+            <span v-for="(part, j) in line.snippet_words" :key="j">
+              {{ part.text }}
+              <span v-if="languageUsesSpaces(line.transcript_language)">
+                {{ " " }}
+              </span>
             </span>
-            {{ " " }}
+          </span>
+        </div>
+        <div
+          v-if="!isFullscreen"
+          class="text-center relative group text-xl mt-2 px-5 py-2 border border-base-300 rounded-xl hover:pt-8"
+        >
+          <div class="absolute top-2 right-2 hidden group-hover:block">
+            <button
+              @click="isFullscreen = true"
+              class="cursor-pointer text-neutral transition-scale transform hover:scale-110 duration-200"
+            >
+              <FullScreenIcon />
+            </button>
+          </div>
+          <span v-for="(line, i) in visibleLines" :key="i">
+            {{ line.translation }}
+            <span v-if="languageUsesSpaces(line.translation_language)">
+              {{ " " }}
+            </span>
           </span>
         </div>
         <div class="mt-[10px] p-[10px]">More Content</div>
@@ -185,14 +200,36 @@ onUnmounted(() => {
   cancelAnimationFrame(animationFrame);
 });
 
+const isAnnotation = (text: string) => /^\s*[\[\(].+[\]\)]\s*$/u.test(text);
+
 const visibleLines = computed<TranslatedSnippet[]>(() => {
-  if (activeIndex.value !== -1) {
-    return snippets.slice(
-      activeIndex.value - (activeIndex.value % 3),
-      activeIndex.value + (3 - (activeIndex.value % 3))
-    );
+  if (activeIndex.value === -1) return [];
+
+  const snippet = snippets[activeIndex.value];
+
+  if (isAnnotation(snippet.text)) {
+    // Show annotation by itself
+    return [snippet];
   }
-  return [];
+
+  const groupSize = 3;
+  const groupStart = Math.floor(activeIndex.value / groupSize) * groupSize;
+  const groupEnd = groupStart + groupSize;
+
+  let group: TranslatedSnippet[] = [];
+  for (let i = groupEnd - 1; i >= groupStart && i >= 0; i--) {
+    const s = snippets[i];
+    if (isAnnotation(s.text) && i < activeIndex.value) {
+      // stop when hitting annotation after normal text
+      break;
+    } else if (isAnnotation(s.text)) {
+      group = [];
+      continue;
+    }
+    group.unshift(s);
+  }
+
+  return group;
 });
 
 const tick = () => {
@@ -203,8 +240,16 @@ const tick = () => {
       (line) => time >= line.start && time < line.end
     );
     activeIndex.value = idx;
+    console.log(activeIndex.value);
   }
   animationFrame = requestAnimationFrame(tick);
+};
+
+// List of languages that do not use spaces between words
+const noSpaceLanguages = ["ja", "zh", "th", "lo", "km", "my", "bo", "mn"];
+
+const languageUsesSpaces = (langCode: string) => {
+  return !noSpaceLanguages.includes(langCode);
 };
 
 const onReady = (event: any) => {
