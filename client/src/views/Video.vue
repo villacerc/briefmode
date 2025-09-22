@@ -41,9 +41,9 @@
           </div>
           <span v-for="(line, i) in visibleLines" :key="i">
             <span
-              class="inline-block"
               v-for="(part, j) in line.snippet_words"
               :key="j"
+              class="relative inline-block group/word"
             >
               <span class="block text-sm">
                 {{ removeAnnotations(part.romanized) }}
@@ -54,6 +54,21 @@
               <span v-if="languageUsesSpaces(line.transcript_language)">
                 {{ " " }}
               </span>
+
+              <!-- Hover popup -->
+              <div
+                class="absolute bottom-full left-1/2 -translate-x-1/2 opacity-0 scale-90 invisible origin-bottom group-hover/word:visible group-hover/word:opacity-100 group-hover/word:scale-100 transition-opacity transition-transform duration-250 ease-out z-50"
+              >
+                <div class="mb-2">
+                  <div class="card shadow-lg bg-base-100 rounded-xl p-3">
+                    <ul class="text-md w-fit whitespace-nowrap">
+                      <li v-for="(t, i) in part.translations" :key="i">
+                        {{ t.text }}
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
             </span>
           </span>
         </div>
