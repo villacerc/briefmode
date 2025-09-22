@@ -18,6 +18,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from models import TranscriptSnippet, Video, Language, Translation, Word, TranslationSnippet
 from database import get_db
 import logging
+from helpers import validate_translation_json
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("uvicorn")
@@ -278,6 +279,7 @@ async def get_translated_snippet(snippet: TranscriptSnippet, lang: Language, db:
         if has_translation:
             return await get_normalized_translated_snippet(snippet, lang, db)
 
+        parsed_json = None
         max_retries = 3
         for attempt in range(max_retries):
             # Call the AI model
@@ -318,23 +320,26 @@ async def get_translated_snippet(snippet: TranscriptSnippet, lang: Language, db:
 
             raw_text = response.output[0].content[0].text.strip()
             try:
-                parsed = json.loads(raw_text)
+                parsed_json = json.loads(raw_text)
+                validate_translation_json(parsed_json, snippet.text)
                 break  # Successfully parsed, exit retry loop
-            except json.JSONDecodeError:
-                logger.warning(f"Attempt {attempt + 1}/{max_retries} failed to parse JSON. Retrying...")
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.warning(
+                    f"Attempt {attempt + 1}/{max_retries} failed: {type(e).__name__} - {e}. Retrying..."
+                )
                 if attempt == max_retries - 1:
                     raise
-                await asyncio.sleep(1)  # optional small delay
+                await asyncio.sleep(1)
 
         # Save parsed data to the database
         transcript_snippet = TranslationSnippet(
-            text=parsed.get("translation", ""),
+            text=parsed_json.get("translation", ""),
             transcript_snippet_id=snippet.id,
             language_id=lang.id,
         )
         db.add(transcript_snippet)
 
-        for i, part in enumerate(parsed.get("word_parts", [])):
+        for i, part in enumerate(parsed_json.get("word_parts", [])):
             word_part = Word(
                 text=part["word"],
                 romanized=part["romanized"],

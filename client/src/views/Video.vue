@@ -19,7 +19,7 @@
         >
           <youtube
             ref="youtubePlayer"
-            src="https://www.youtube.com/watch?v=qzzweIQoIOU"
+            :src="`https://www.youtube.com/watch?v=${route.params.id}`"
             width="100%"
             height="100%"
             :style="{ width: '100%', height: '100%' }"
