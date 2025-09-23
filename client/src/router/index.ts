@@ -1,8 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
 // Import your components (pages)
-import Home from '../views/Home.vue';
-import Video from '../views/Video.vue';
+import Home from '../views/home/Home.vue';
+import Video from '../views/video/Video.vue';
 
 const routes = [
   { path: '/', name: 'Home', component: Home },
