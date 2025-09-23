@@ -39,18 +39,27 @@
               <FullScreenIcon />
             </button>
           </div>
-          <span v-for="(line, i) in visibleLines" :key="i">
+          <span
+            v-for="(line, i) in visibleLines"
+            :key="i"
+            class="inline-block rounded-sm"
+            :class="[
+              i === activeIndex % VISIBLE_LINES_SIZE && !isAnnotation(line.text)
+                ? 'bg-neutral text-neutral-content'
+                : '',
+            ]"
+          >
             <span
               v-for="(part, j) in line.snippet_words"
               :key="j"
-              class="relative inline-block group/word"
+              class="relative cursor-pointer inline-block group/word hover:bg-secondary hover:text-base-content rounded-sm"
             >
-              <span class="block text-sm">
+              <p class="text-sm">
                 {{ removeAnnotations(part.romanized) }}
-              </span>
-              <span class="block">
+              </p>
+              <p class="">
                 {{ part.text }}
-              </span>
+              </p>
               <span v-if="languageUsesSpaces(line.transcript_language)">
                 {{ " " }}
               </span>
@@ -61,7 +70,9 @@
               >
                 <div class="mb-2">
                   <div class="card shadow-lg bg-base-100 rounded-xl p-3">
-                    <ul class="text-md w-fit whitespace-nowrap">
+                    <ul
+                      class="text-md text-base-content w-fit whitespace-nowrap"
+                    >
                       <li v-for="(t, i) in part.translations" :key="i">
                         {{ t.text }}
                       </li>
@@ -84,14 +95,20 @@
               <FullScreenIcon />
             </button>
           </div>
-          <span v-for="(line, i) in visibleLines" :key="i">
+          <span
+            v-for="(line, i) in visibleLines"
+            :key="i"
+            class="inline-block rounded-sm"
+            :class="[
+              i === activeIndex % VISIBLE_LINES_SIZE && !isAnnotation(line.text)
+                ? 'bg-neutral text-neutral-content'
+                : '',
+              languageUsesSpaces(line.translation_language) ? 'mr-1' : '',
+            ]"
+          >
             {{ line.translation }}
-            <span v-if="languageUsesSpaces(line.translation_language)">
-              {{ " " }}
-            </span>
           </span>
         </div>
-        <div class="mt-[10px] p-[10px]">More Content</div>
       </div>
 
       <!-- Floating Transcript -->
@@ -119,7 +136,7 @@
           >
             <span
               :class="
-                activeIndex !== -1 && idx === activeIndex % 3
+                activeIndex !== -1 && idx === activeIndex % VISIBLE_LINES_SIZE
                   ? 'text-secondary'
                   : ''
               "
@@ -168,6 +185,7 @@ const snippets = reactive<TranslatedSnippet[]>([]);
 const isDragging = ref(false);
 const draggableBox = ref<HTMLElement | null>(null);
 const isFullscreen = ref(false);
+const VISIBLE_LINES_SIZE = 3;
 
 const youtube = YouTube;
 let animationFrame: number;
@@ -240,9 +258,9 @@ const visibleLines = computed<TranslatedSnippet[]>(() => {
     return [snippet];
   }
 
-  const groupSize = 3;
-  const groupStart = Math.floor(activeIndex.value / groupSize) * groupSize;
-  const groupEnd = groupStart + groupSize;
+  const groupStart =
+    Math.floor(activeIndex.value / VISIBLE_LINES_SIZE) * VISIBLE_LINES_SIZE;
+  const groupEnd = groupStart + VISIBLE_LINES_SIZE;
 
   let group: TranslatedSnippet[] = [];
   for (let i = groupEnd - 1; i >= groupStart && i >= 0; i--) {
@@ -268,7 +286,6 @@ const tick = () => {
       (line) => time >= line.start && time < line.end
     );
     activeIndex.value = idx;
-    console.log(activeIndex.value);
   }
   animationFrame = requestAnimationFrame(tick);
 };
