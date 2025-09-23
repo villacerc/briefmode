@@ -19,6 +19,8 @@ from models import TranscriptSnippet, Video, Language, Translation, Word, Transl
 from database import get_db
 import logging
 from helpers import validate_translation_json
+from app.services import VideoService
+from app.stores import LanguageStore
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("uvicorn")
@@ -42,10 +44,8 @@ app.add_middleware(
 
 load_dotenv()
 
-ytt_api = YouTubeTranscriptApi()
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 async_openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-translation_rules = os.getenv("TRANSLATION_RULES", "")
 
 @dataclass
 class WordTranslation:
@@ -84,11 +84,13 @@ async def root():
 @app.get("/api/video/{source_id}", summary="Get Video Translation")
 def get_video(source_id: str, lang: str):
     try:
-        translation_lang = get_language_by_code(lang)
+        db = next(get_db())
+
+        translation_lang = LanguageStore(db).get_by_code(lang)
         if not translation_lang:
             raise ValueError(f"Language with code '{lang}' not found.")
 
-        transcript = get_transcript(source_id)
+        transcript = VideoService(db).fetch_transcript(source_id)
         translations_generator = stream_translations(transcript[:15], translation_lang)
 
         return StreamingResponse(translations_generator, media_type="application/json")
@@ -99,6 +101,8 @@ def get_video(source_id: str, lang: str):
             status_code=500,
             detail=message
         )
+    finally:
+        db.close()
 
 @app.get("/api/languages", summary="Get Languages")
 def get_video_languages():
@@ -113,75 +117,6 @@ def get_video_languages():
             status_code=500,
             detail=message
         )
-    finally:
-        db.close()
-
-def get_language_by_code(code: str) -> Language:
-    db = next(get_db())
-    try:
-        language = db.execute(
-            select(Language).where(Language.code == code)
-        ).scalars().first()
-
-        return language
-
-    except Exception as e:
-        raise RuntimeError(f"Failed to fetch language with code '{code}'. {str(e)}") from e
-    finally:
-        db.close()
-
-def get_transcript(source_id: str) -> List[TranscriptSnippet]:
-    db = next(get_db())
-    try:
-        # Fetch the video
-        video = db.execute(
-            select(Video).options(joinedload(Video.transcript_snippets))
-            .where(Video.source_id == source_id)
-        ).scalars().first()
-
-        # Check if transcript already exists
-        if video and video.transcript_snippets:
-            return video.transcript_snippets
-
-        # Fetch from API
-        transcript_list = ytt_api.list(source_id)
-        first_transcript = next(iter(transcript_list))
-        transcript_data = ytt_api.fetch(source_id, languages=[first_transcript.language_code])
-
-        # Ensure language exists
-        language = get_language_by_code(transcript_data.language_code)
-
-        if not language:
-            language = Language(code=transcript_data.language_code, name=transcript_data.language)
-            db.add(language)
-            db.commit()
-            db.refresh(language)
-
-        video = Video(source_id=source_id, language_id=language.id)
-        db.add(video)
-        db.commit()
-        db.refresh(video)
-
-        # Save all snippets at once
-        transcript = []
-        for i, item in enumerate(transcript_data.snippets):
-            snippet = TranscriptSnippet(
-                video_id=video.id,
-                text=item.text,
-                start=item.start,
-                end=transcript_data[i + 1].start if i < len(transcript_data) - 1 else item.start + item.duration,
-                duration=item.duration
-            )
-            db.add(snippet)
-            transcript.append(snippet)
-
-        db.commit()
-        return transcript
-    except SQLAlchemyError as e:
-        db.rollback()
-        raise RuntimeError(f"Database error. {str(e)}") from e
-    except Exception as e:
-        raise RuntimeError(f"Failed to fetch transcript. {str(e)}") from e
     finally:
         db.close()
 
