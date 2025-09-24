@@ -132,6 +132,7 @@ class TranslationService:
             } for w in words]
 
             return {
+                "snippet_id": snippet.id,
                 "text": snippet.text,
                 "translation": translation_snippet.text if translation_snippet else "",
                 "transcript_language": video.language.code,

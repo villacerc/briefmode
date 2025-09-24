@@ -7,7 +7,7 @@
       :key="i"
       class="inline-block rounded-sm"
       :class="[
-        i === activeIndex % VISIBLE_LINES_SIZE && !isAnnotation(line.text)
+        line.snippet_id === snippets[activeIndex].snippet_id && !isAnnotation(line.text)
           ? 'bg-neutral text-neutral-content'
           : '',
         languageUsesSpaces(line.translation_language) ? 'mr-1' : '',
@@ -53,7 +53,7 @@
       :key="i"
       class="inline-block rounded-sm"
       :class="[
-        i === activeIndex % VISIBLE_LINES_SIZE && !isAnnotation(line.text)
+        line.snippet_id === snippets[activeIndex].snippet_id && !isAnnotation(line.text)
           ? 'bg-neutral text-neutral-content'
           : '',
         languageUsesSpaces(line.translation_language) ? 'mr-1' : '',

@@ -1,4 +1,5 @@
 export type TranslatedSnippet = {
+  snippet_id: number;
   text: string;
   translation: string
   transcript_language: string;
