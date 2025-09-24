@@ -6,6 +6,9 @@ class VideoStore:
     def __init__(self, db):
         self.db = db
 
+    def get_video(self, video_id: int):
+        return self.db.query(Video).filter(Video.id == video_id).first()
+
     def get_transcript(self, source_id: str):
         video = self.db.execute(
             select(Video).options(joinedload(Video.transcript_snippets))

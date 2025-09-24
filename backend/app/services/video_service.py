@@ -3,13 +3,13 @@ from youtube_transcript_api import YouTubeTranscriptApi
 
 class VideoService:
     def __init__(self, db):
-        self.video_store = VideoStore(db)
+        self.store = VideoStore(db)
         self.language_store = LanguageStore(db)
         self.ytt_api = YouTubeTranscriptApi()
 
     def fetch_transcript(self, source_id: str):
         # Check transcript in DB
-        transcript = self.video_store.get_transcript(source_id)
+        transcript = self.store.get_transcript(source_id)
         if transcript:
             return transcript
 
@@ -29,4 +29,4 @@ class VideoService:
             )
 
         # Persist new video + transcript
-        return self.video_store.save_transcript(source_id, language.id, transcript_data)
+        return self.store.save_transcript(source_id, language.id, transcript_data)
