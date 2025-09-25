@@ -1,6 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
-from models import Video, TranscriptSnippet
+from models import Video, TranscriptSnippet, Snippet
 
 class VideoStore:
     def __init__(self, db):
@@ -20,22 +20,25 @@ class VideoStore:
         return None
 
     def save_transcript(self, source_id: str, language_id: int, transcript_data):
-        video = Video(source_id=source_id, language_id=language_id)
+        video = Video(source_id=source_id)
         self.db.add(video)
-        self.db.commit()
-        self.db.refresh(video)
+        self.db.flush()
 
         transcript = []
         for i, item in enumerate(transcript_data.snippets):
-            snippet = TranscriptSnippet(
+            snippet = Snippet(language_id=language_id, text=item.text)
+            self.db.add(snippet)
+            self.db.flush()
+            
+            ts_snippet = TranscriptSnippet(
                 video_id=video.id,
-                text=item.text,
+                snippet_id=snippet.id,
                 start=item.start,
                 end=transcript_data[i + 1].start if i < len(transcript_data) - 1 else item.start + item.duration,
                 duration=item.duration
             )
-            self.db.add(snippet)
-            transcript.append(snippet)
+            self.db.add(ts_snippet)
+            transcript.append(ts_snippet)
 
         self.db.commit()
         return transcript

@@ -1,7 +1,7 @@
 # app/services/translation_service.py
 import asyncio
 import json
-from models import TranscriptSnippet, Language, Word, Translation, Video
+from models import TranscriptSnippet, Language, Word, Translation, Video, SnippetWord
 from app.stores import TranslationStore, VideoStore
 from .helpers import validate_translation_json
 from openai import AsyncOpenAI
@@ -17,36 +17,36 @@ class TranslationService:
         self.video_store = VideoStore(db)
         self.async_openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))  # Assume this is initialized elsewhere
 
-    async def get_translations(self, snippets: List[TranscriptSnippet], lang: Language) -> List[Dict]:
+    async def get_translations(self, ts_snippets: List[TranscriptSnippet], translation_lang: Language) -> List[Dict]:
         # Create a semaphore to limit concurrency to avoid overloading API and database
         semaphore = asyncio.Semaphore(self.SEMAPHORE_CONCURRENCY)
-    
-        async def worker(snippet: TranscriptSnippet, lang: Language):
+
+        async def worker(ts_snippet: TranscriptSnippet, translation_lang: Language):
             async with semaphore:
-                translated_snippet = await self.get_translated_snippet(snippet, lang)
+                translated_snippet = await self.get_translated_snippet(ts_snippet, translation_lang)
                 return translated_snippet
 
         try:
             # Return a list of all translated snippets in same order
             # * unpacks the iterable into individual arguments for a function.
             # eg. (worker(a), worker(b), worker(c))
-            return await asyncio.gather(*(worker(s, lang) for s in snippets))
+            return await asyncio.gather(*(worker(s, lang) for s in ts_snippets))
         except Exception as e:
             raise RuntimeError(f"Error occurred while translating snippets. {e}")
 
-    async def get_translated_snippet(self, snippet: TranscriptSnippet, lang: Language):
-        if self.snippet_has_translation_for_language(snippet.id, lang.id):
-            video = self.video_store.get_video(snippet.video_id)
-            return self.get_normalized_translated_snippet(snippet, lang, video)
+    async def get_translated_snippet(self, ts_snippet: TranscriptSnippet, translation_lang: Language):
+        if self.ts_snippet_has_translation_for_language(ts_snippet.snippet_id, translation_lang.id):
+            video = self.video_store.get_video(ts_snippet.video_id)
+            return self.get_normalized_translated_snippet(ts_snippet, translation_lang, video)
 
         # Call AI, parse JSON, etc.
-        parsed_json = await self.fetch_ai_translation(snippet, lang)
+        parsed_json = await self.fetch_ai_translation(ts_snippet.snippet.text, translation_lang)
 
         # Save to DB
-        self.store.save_translation(snippet.id, lang.id, parsed_json)
+        self.store.save_translation(ts_snippet, translation_lang.id, parsed_json)
 
-        video = self.video_store.get_video(snippet.video_id)
-        return self.get_normalized_translated_snippet(snippet, lang, video)
+        video = self.video_store.get_video(ts_snippet.video_id)
+        return self.get_normalized_translated_snippet(ts_snippet, translation_lang, video)
 
     async def retry_with_backoff(self, coro, retries=5, base_delay=1):
         for attempt in range(retries):
@@ -58,11 +58,11 @@ class TranslationService:
                 delay = base_delay * (2 ** attempt) + random.uniform(0, 0.5)
                 await asyncio.sleep(delay)
 
-    def snippet_has_translation_for_language(self, snippet_id: int, lang_id: int) -> bool:
-        translations = self.store.get_translations_by_snippet_and_language(snippet_id, lang_id)
-        return len(translations) > 0
+    def ts_snippet_has_translation_for_language(self, snippet_id: int, lang_id: int) -> bool:
+        translation = self.store.get_snippet_translation_by_language(snippet_id, lang_id)
+        return translation is not None
 
-    async def fetch_ai_translation(self, snippet, lang):
+    async def fetch_ai_translation(self, snippet_text, translation_lang):
         parsed_json = None
         max_retries = 3
         for attempt in range(max_retries):
@@ -71,7 +71,7 @@ class TranslationService:
                 self.async_openai_client.responses.create(
                     model="gpt-4.1-nano",
                     input=f"""
-                    Translate the input below to {lang.name}.
+                    Translate the input below to {translation_lang.name}.
                     Rules:
                     1. Respond ONLY with valid JSON. Do NOT include explanations, comments, or extra text.
                     2. Capitalize the first word only if required by grammar.
@@ -96,7 +96,7 @@ class TranslationService:
                     }}
 
                     Input:
-                    {snippet.text}
+                    {snippet_text}
                     """,
                     store=False
                 )
@@ -105,7 +105,7 @@ class TranslationService:
             raw_text = response.output[0].content[0].text.strip()
             try:
                 parsed_json = json.loads(raw_text)
-                validate_translation_json(parsed_json, snippet.text)
+                validate_translation_json(parsed_json, snippet_text)
                 return parsed_json
             except (json.JSONDecodeError, ValueError) as e:
                 print(
@@ -115,32 +115,29 @@ class TranslationService:
                     raise RuntimeError(f"Failed to parse AI response after {max_retries} attempts. Last error: {e}") from e
                 await asyncio.sleep(1)
 
-    def get_normalized_translated_snippet(self, snippet: TranscriptSnippet, lang: Language, video: Video) -> Dict:
+    def get_normalized_translated_snippet(self, ts_snippet: TranscriptSnippet, translation_lang: Language, video: Video) -> Dict:
         try:
-            words = self.db.query(Word).join(Translation).filter(
-                Word.transcript_snippet_id == snippet.id,
-                Translation.language_id == lang.id
-            ).all()
+            snippet_words = ts_snippet.snippet.words
 
-            translation_snippet = self.store.get_translation_snippet_by_language(snippet.id, lang.id)
+            translation_snippet = self.store.get_translation_snippet_by_language(ts_snippet.snippet_id, translation_lang.id)
 
-            snippet_words = [{
+            normalized_snippet_words = [{
                 "text": w.text,
-                "romanized": w.romanized,
-                "translations": [{"text": t.text, "order_index": t.order_index} for t in w.translations],
+                "romanized": w.word.romanized,
+                "translations": [{"text": t.text, "order_index": t.order_index} for t in w.word.translations],
                 "order_index": w.order_index
-            } for w in words]
+            } for w in snippet_words]
 
             return {
-                "snippet_id": snippet.id,
-                "text": snippet.text,
+                "snippet_id": ts_snippet.id,
+                "text": ts_snippet.snippet.text,
                 "translation": translation_snippet.text if translation_snippet else "",
-                "transcript_language": video.language.code,
-                "translation_language": lang.code,
-                "start": snippet.start,
-                "end": snippet.end,
-                "duration": snippet.duration,
-                "snippet_words": snippet_words
+                "transcript_language": ts_snippet.snippet.language.code,
+                "translation_language": translation_lang.code,
+                "start": ts_snippet.start,
+                "end": ts_snippet.end,
+                "duration": ts_snippet.duration,
+                "snippet_words": normalized_snippet_words
             }
         except Exception as e:
             raise RuntimeError(f"Error normalizing translated snippet. {e}") from e

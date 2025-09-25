@@ -88,14 +88,14 @@ def get_video_languages():
         db.close()
 
 # Stream translations for the transcript.
-async def stream_translations(db: Session , transcript: List[TranscriptSnippet], lang: Language):
+async def stream_translations(db: Session , transcript: List[TranscriptSnippet], translation_lang: Language):
     # Break transcript into chunks
     chunk_size = 15 
     for i in range(0, len(transcript), chunk_size):
         transcript_chunk = transcript[i:i + chunk_size]
 
         try:
-            translated_chunk = await TranslationService(db).get_translations(transcript_chunk, lang)
+            translated_chunk = await TranslationService(db).get_translations(transcript_chunk, translation_lang)
 
             # Send a chunk to the client immediately
             # yield: instead of returning just once, it can produce a series of results over time, pausing between each one.

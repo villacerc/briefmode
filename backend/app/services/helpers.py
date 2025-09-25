@@ -57,3 +57,24 @@ def validate_translation_json(parsed: dict, snippet_text: str) -> None:
                 raise ValueError(
                     f"word_parts[{i}]['translations'][{j}]['translation'] must be a string"
                 )
+
+def sanitize_word(word: str) -> str:
+    # 1. Unicode normalize
+    word = unicodedata.normalize("NFC", word)
+
+    # 2. Casefold (Unicode-aware lowercase)
+    word = word.casefold()
+
+    # 3. Remove ASCII punctuation except apostrophe
+    word = re.sub(r"[!\"#$%&()*+,-./:;<=>?@[\\\]^_`{|}~]", "", word)
+
+    # 4. Collapse whitespace
+    word = re.sub(r"\s+", " ", word).strip()
+
+    # 5. Strip accents if for search
+    word = ''.join(
+        c for c in unicodedata.normalize('NFD', word)
+        if unicodedata.category(c) != 'Mn'
+    )
+
+    return word

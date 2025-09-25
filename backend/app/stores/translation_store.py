@@ -1,45 +1,42 @@
 # app/stores/translations_store.py
 from sqlalchemy.orm import Session
-from models import Word, Translation, TranslationSnippet
+from models import Word, Translation, SnippetTranslation, SnippetWord, TranscriptSnippet
+from app.services.helpers import sanitize_word
 
 class TranslationStore:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_translations_by_snippet_and_language(self, snippet_id: int, lang_id: int) -> bool:
-        return self.db.query(Translation).join(Word).filter(
-            Word.transcript_snippet_id == snippet_id,
-            Translation.language_id == lang_id
-        ).all()
-
-    def get_translation_snippet_by_language(self, snippet_id: int, lang_id: int) -> bool:
-        return self.db.query(TranslationSnippet).filter(
-            TranslationSnippet.transcript_snippet_id == snippet_id,
-            TranslationSnippet.language_id == lang_id
+    def get_snippet_translation_by_language(self, snippet_id: int, lang_id: int) -> bool:
+        return self.db.query(SnippetTranslation).filter(
+            SnippetTranslation.snippet_id == snippet_id,
+            SnippetTranslation.language_id == lang_id
         ).first()
 
-    def save_translation(self, snippet_id: int, lang_id: int, parsed_json: dict):
+    def save_translation(self, ts_snippet: TranscriptSnippet, translation_lang_id: int, parsed_json: dict):
         # Save translation snippet
-        transcript_snippet = TranslationSnippet(
+        snippet_translation = SnippetTranslation(
             text=parsed_json.get("translation", ""),
-            transcript_snippet_id=snippet_id,
-            language_id=lang_id,
+            snippet_id=ts_snippet.snippet_id,
+            language_id=translation_lang_id,
         )
-        self.db.add(transcript_snippet)
-        self.db.commit()
-        self.db.refresh(transcript_snippet)
+        self.db.add(snippet_translation)
+        self.db.flush()
 
         # Save words & translations
         for i, part in enumerate(parsed_json.get("word_parts", [])):
-            word = Word(
+            source_lang_id = ts_snippet.snippet.language_id
+            word = self.save_word(part["word"], part["romanized"], part.get("translations", []), source_lang_id, translation_lang_id)
+
+            snippet_word = SnippetWord(
                 text=part["word"],
-                romanized=part["romanized"],
-                transcript_snippet_id=snippet_id,
+                word_id=word.id,
+                snippet_id=snippet_id,
                 order_index=i
             )
-            self.db.add(word)
-            self.db.commit()
-            self.db.refresh(word)
+            self.db.add(snippet_word)
+            self.db.flush()
+   
             for j, tpart in enumerate(part.get("translations", [])):
                 translation = Translation(
                     text=tpart["translation"],
@@ -49,3 +46,36 @@ class TranslationStore:
                 )
                 self.db.add(translation)
         self.db.commit()
+
+    def save_word(self, word_text: str, romanized: str, translations: list, source_lang_id, translation_lang_id) -> Word:
+        word_sanitized = sanitize_word(word_text)
+
+        existing_word = self.db.query(Word).filter(
+            Word.text == word_sanitized,
+            Word.language_id == source_lang_id
+        ).first()
+
+        if existing_word:
+            return existing_word
+
+        new_word = Word(
+            text=word_sanitized,
+            romanized=romanized,
+            language_id=source_lang_id
+        )
+        self.db.add(new_word)
+        self.db.flush()
+
+        for i, t in enumerate(translations): 
+            translation = Translation(
+                text=t["translation"],
+                word_id=new_word.id,
+                language_id=translation_lang_id,
+                order_index=i
+            )
+            self.db.add(translation)
+
+        self.db.commit()
+        self.db.refresh(new_word)
+
+        return new_word
