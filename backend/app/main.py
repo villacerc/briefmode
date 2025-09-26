@@ -51,16 +51,10 @@ async def root():
 @app.get("/api/video/{source_id}", summary="Get Video Translation")
 def get_video(source_id: str, lang: str):
     try:
-        db = next(get_db())
-
-        translation_lang = LanguageStore(db).get_by_code(lang)
-        if not translation_lang:
-            raise ValueError(f"Language with code '{lang}' not found.")
-
-        transcript = VideoService(db).fetch_transcript(source_id)
-        translations_generator = stream_translations(db, transcript[:15], translation_lang)
-
-        return StreamingResponse(translations_generator, media_type="application/json")
+        return StreamingResponse(
+            stream_translations(source_id, lang),
+            media_type="application/json"
+        )
     except Exception as e:
         message = f"Error occurred while attempting to translate video (id: {source_id}). {e}"
         logger.error(message)
@@ -68,8 +62,6 @@ def get_video(source_id: str, lang: str):
             status_code=500,
             detail=message
         )
-    finally:
-        db.close()
 
 @app.get("/api/languages", summary="Get Languages")
 def get_video_languages():
@@ -88,27 +80,28 @@ def get_video_languages():
         db.close()
 
 # Stream translations for the transcript.
-async def stream_translations(db: Session , transcript: List[TranscriptSnippet], translation_lang: Language):
-    # Break transcript into chunks
-    chunk_size = 15 
-    for i in range(0, len(transcript), chunk_size):
-        transcript_chunk = transcript[i:i + chunk_size]
+async def stream_translations(source_id: str, lang: str):
+    db = next(get_db())
 
-        try:
-            translated_chunk = await TranslationService(db).get_translations(transcript_chunk, translation_lang)
+    try:
+        translation_lang = LanguageStore(db).get_by_code(lang)
+        if not translation_lang:
+            raise ValueError(f"Language with code '{lang}' not found.")
 
-            # Send a chunk to the client immediately
-            # yield: instead of returning just once, it can produce a series of results over time, pausing between each one.
-            yield json.dumps({
-                "message": "Chunk translated",
-                "data": translated_chunk
-            }, ensure_ascii=False) + "\n"
-        except Exception as e:
-            yield json.dumps({
-                "message": "Failed to translate chunk",
-                "chunk_index": i,
-                "error": str(e)
-            }, ensure_ascii=False) + "\n"
+        transcript_snippets = VideoService(db).fetch_transcript_snippets(source_id)
+        transcript_snippets = transcript_snippets[:5]
+
+        chunk_size = 15
+        for i in range(0, len(transcript_snippets), chunk_size):
+            transcript_chunk = transcript_snippets[i:i+chunk_size]
+            try:
+                translated_chunk = await TranslationService(db).get_translations(transcript_chunk, translation_lang)
+                yield json.dumps({"message": "Chunk translated", "data": translated_chunk}, ensure_ascii=False) + "\n"
+            except Exception as e:
+                yield json.dumps({"message": "Failed to translate chunk", "chunk_index": i, "error": str(e)}, ensure_ascii=False) + "\n"
+    finally:
+        db.close()
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)

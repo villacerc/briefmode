@@ -1,4 +1,6 @@
 import re
+import regex
+import unicodedata
 
 def validate_translation_json(parsed: dict, snippet_text: str) -> None:
     """
@@ -16,7 +18,7 @@ def validate_translation_json(parsed: dict, snippet_text: str) -> None:
     if not isinstance(parsed["word_parts"], list):
         raise ValueError("'word_parts' must be a list")
 
-    latin_regex = re.compile(r"^[A-Za-z0-9\s\-\']*$")  # allow letters, numbers, spaces, hyphen, apostrophe
+    latin_regex = regex.compile(r"^[\p{Latin}0-9\s\-\']*$")  # allow letters, numbers, spaces, hyphen, apostrophe
 
     for i, part in enumerate(parsed["word_parts"], start=1):
         if not isinstance(part, dict):

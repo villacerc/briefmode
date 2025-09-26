@@ -7,11 +7,11 @@ class VideoService:
         self.language_store = LanguageStore(db)
         self.ytt_api = YouTubeTranscriptApi()
 
-    def fetch_transcript(self, source_id: str):
+    def fetch_transcript_snippets(self, source_id: str):
         # Check transcript in DB
-        transcript = self.store.get_transcript(source_id)
-        if transcript:
-            return transcript
+        transcript_snippets = self.store.get_transcript_snippets(source_id)
+        if transcript_snippets:
+            return transcript_snippets
 
         # Fetch from external API if not in DB
         transcript_list = self.ytt_api.list(source_id)
@@ -29,4 +29,4 @@ class VideoService:
             )
 
         # Persist new video + transcript
-        return self.store.save_transcript(source_id, language.id, transcript_data)
+        return self.store.save_transcript_snippets(source_id, language.id, transcript_data)

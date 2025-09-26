@@ -31,7 +31,7 @@ class TranslationStore:
             snippet_word = SnippetWord(
                 text=part["word"],
                 word_id=word.id,
-                snippet_id=snippet_id,
+                snippet_id=ts_snippet.snippet_id,
                 order_index=i
             )
             self.db.add(snippet_word)
@@ -41,7 +41,7 @@ class TranslationStore:
                 translation = Translation(
                     text=tpart["translation"],
                     word_id=word.id,
-                    language_id=lang_id,
+                    language_id=translation_lang_id,
                     order_index=j
                 )
                 self.db.add(translation)

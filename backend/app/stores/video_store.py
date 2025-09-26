@@ -1,6 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
-from models import Video, TranscriptSnippet, Snippet
+from models import Video, TranscriptSnippet, Snippet, SnippetWord, Word
 
 class VideoStore:
     def __init__(self, db):
@@ -9,22 +9,30 @@ class VideoStore:
     def get_video(self, video_id: int):
         return self.db.query(Video).filter(Video.id == video_id).first()
 
-    def get_transcript(self, source_id: str):
+    def get_transcript_snippets(self, source_id: str):
         video = self.db.execute(
-            select(Video).options(joinedload(Video.transcript_snippets))
-            .where(Video.source_id == source_id)
+            select(Video).options(
+                joinedload(Video.transcript_snippets)
+                .joinedload(TranscriptSnippet.snippet)
+                .joinedload(Snippet.snippet_words)
+                .joinedload(SnippetWord.word)
+                .joinedload(Word.translations),
+                joinedload(Video.transcript_snippets)
+                .joinedload(TranscriptSnippet.snippet)
+                .joinedload(Snippet.language)
+            ).where(Video.source_id == source_id)
         ).scalars().first()
 
         if video and video.transcript_snippets:
             return video.transcript_snippets
         return None
 
-    def save_transcript(self, source_id: str, language_id: int, transcript_data):
+    def save_transcript_snippets(self, source_id: str, language_id: int, transcript_data):
         video = Video(source_id=source_id)
         self.db.add(video)
         self.db.flush()
 
-        transcript = []
+        transcript_snippets = []
         for i, item in enumerate(transcript_data.snippets):
             snippet = Snippet(language_id=language_id, text=item.text)
             self.db.add(snippet)
@@ -38,7 +46,7 @@ class VideoStore:
                 duration=item.duration
             )
             self.db.add(ts_snippet)
-            transcript.append(ts_snippet)
+            transcript_snippets.append(ts_snippet)
 
         self.db.commit()
-        return transcript
+        return transcript_snippets

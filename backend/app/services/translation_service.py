@@ -30,7 +30,7 @@ class TranslationService:
             # Return a list of all translated snippets in same order
             # * unpacks the iterable into individual arguments for a function.
             # eg. (worker(a), worker(b), worker(c))
-            return await asyncio.gather(*(worker(s, lang) for s in ts_snippets))
+            return await asyncio.gather(*(worker(s, translation_lang) for s in ts_snippets))
         except Exception as e:
             raise RuntimeError(f"Error occurred while translating snippets. {e}")
 
@@ -117,9 +117,9 @@ class TranslationService:
 
     def get_normalized_translated_snippet(self, ts_snippet: TranscriptSnippet, translation_lang: Language, video: Video) -> Dict:
         try:
-            snippet_words = ts_snippet.snippet.words
+            snippet_words = ts_snippet.snippet.snippet_words
 
-            translation_snippet = self.store.get_translation_snippet_by_language(ts_snippet.snippet_id, translation_lang.id)
+            snippet_translation = self.store.get_snippet_translation_by_language(ts_snippet.snippet_id, translation_lang.id)
 
             normalized_snippet_words = [{
                 "text": w.text,
@@ -131,7 +131,7 @@ class TranslationService:
             return {
                 "snippet_id": ts_snippet.id,
                 "text": ts_snippet.snippet.text,
-                "translation": translation_snippet.text if translation_snippet else "",
+                "translation": snippet_translation.text if snippet_translation else "",
                 "transcript_language": ts_snippet.snippet.language.code,
                 "translation_language": translation_lang.code,
                 "start": ts_snippet.start,

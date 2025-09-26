@@ -57,7 +57,7 @@ class Snippet(Base):
     )
 
     __table_args__ = (
-        Index("ix_snippet_text_lang", "text", "language_id", unique=True),
+        Index("ix_snippet_text_lang", "text", "language_id"),
     )
 
 class SnippetTranslation(Base):
