@@ -47,8 +47,14 @@ class Snippet(Base):
     created_at = Column(DateTime, server_default=func.now())
 
     language = relationship("Language", back_populates="snippets")
-    words = relationship("SnippetWord", back_populates="snippet", cascade="all, delete-orphan", order_by="SnippetWord.order_index")
+    snippet_words = relationship("SnippetWord", back_populates="snippet", cascade="all, delete-orphan", order_by="SnippetWord.order_index")
     translations = relationship("SnippetTranslation", back_populates="snippet", cascade="all, delete-orphan")
+    transcript_snippet = relationship(
+        "TranscriptSnippet",
+        back_populates="snippet",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
 
     __table_args__ = (
         Index("ix_snippet_text_lang", "text", "language_id", unique=True),
@@ -95,6 +101,7 @@ class Word(Base):
 
     created_at = Column(DateTime, server_default=func.now())
 
+    language = relationship("Language", back_populates="words")
     snippet_words = relationship("SnippetWord", back_populates="word")
     translations = relationship("Translation", back_populates="word", cascade="all, delete-orphan")
 
@@ -126,7 +133,8 @@ class Language(Base):
     code = Column(String(10), unique=True, nullable=False, index=True)
     name = Column(String(100), nullable=False)
 
-    videos = relationship("Video", back_populates="language")
+    created_at = Column(DateTime, server_default=func.now())
+
     snippets = relationship("Snippet", back_populates="language")
     snippet_translations = relationship("SnippetTranslation", back_populates="language")
     words = relationship("Word", back_populates="language")
