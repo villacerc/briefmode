@@ -7,7 +7,8 @@
       :key="i"
       class="inline-block rounded-sm"
       :class="[
-        line.snippet_id === snippets[activeIndex].snippet_id && !isAnnotation(line.text)
+        line.snippet_id === snippets[activeIndex].snippet_id &&
+        !isAnnotation(line.text)
           ? 'bg-neutral text-neutral-content'
           : '',
         languageUsesSpaces(line.translation_language) ? 'mr-1' : '',
@@ -53,7 +54,8 @@
       :key="i"
       class="inline-block rounded-sm"
       :class="[
-        line.snippet_id === snippets[activeIndex].snippet_id && !isAnnotation(line.text)
+        line.snippet_id === snippets[activeIndex].snippet_id &&
+        !isAnnotation(line.text)
           ? 'bg-neutral text-neutral-content'
           : '',
         languageUsesSpaces(line.translation_language) ? 'mr-1' : '',
@@ -106,7 +108,10 @@ const visibleLines = computed<TranslatedSnippet[]>(() => {
 
   const groupStart =
     Math.floor(props.activeIndex / VISIBLE_LINES_SIZE) * VISIBLE_LINES_SIZE;
-  const groupEnd = groupStart + VISIBLE_LINES_SIZE;
+  const groupEnd = Math.min(
+    groupStart + VISIBLE_LINES_SIZE,
+    props.snippets.length
+  );
 
   let group: TranslatedSnippet[] = [];
   for (let i = groupEnd - 1; i >= groupStart && i >= 0; i--) {

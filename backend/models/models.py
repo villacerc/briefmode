@@ -117,6 +117,7 @@ class Translation(Base):
     language_id = Column(Integer, ForeignKey("languages.id"), nullable=False)
     text = Column(Text, nullable=False)
     order_index = Column(Integer, nullable=False)
+    
     created_at = Column(DateTime, server_default=func.now())
 
     word = relationship("Word", back_populates="translations")

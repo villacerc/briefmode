@@ -36,16 +36,9 @@ class TranslationStore:
             )
             self.db.add(snippet_word)
             self.db.flush()
-   
-            for j, tpart in enumerate(part.get("translations", [])):
-                translation = Translation(
-                    text=tpart["translation"],
-                    word_id=word.id,
-                    language_id=translation_lang_id,
-                    order_index=j
-                )
-                self.db.add(translation)
+
         self.db.commit()
+        return snippet_translation
 
     def save_word(self, word_text: str, romanized: str, translations: list, source_lang_id, translation_lang_id) -> Word:
         word_sanitized = sanitize_word(word_text)
