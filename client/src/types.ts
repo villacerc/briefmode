@@ -12,6 +12,7 @@ export type TranslatedSnippet = {
 
 export type SnippetWord = {
   text: string;
+  part_of_speech: string;
   romanized: string;
   order_index: number;
   translations: Translation[];

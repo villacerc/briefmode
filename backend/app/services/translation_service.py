@@ -77,6 +77,7 @@ class TranslationService:
                     2. Capitalize the first word only if required by grammar.
                     3. Break down input into individual words or tokens, including:
                        - "word": original word
+                       - "part_of_speech": part of speech of the word (e.g., noun, verb, adjective, etc.)
                        - "romanized": Latin script romanization, "" if already Latin
                        - "translations": main translation first, up to 2 alternatives
                     4. "romanized" must never contain non-Latin characters.
@@ -89,6 +90,7 @@ class TranslationService:
                       "word_parts": [
                         {{
                           "word": "<original word>",
+                          "part_of_speech": "<part of speech>",
                           "romanized": "<romanized form in Latin or ''>",
                           "translations": [{{ "translation": "<translated word>" }}]
                         }}
@@ -123,6 +125,7 @@ class TranslationService:
 
             normalized_snippet_words = [{
                 "text": w.text,
+                "part_of_speech": w.part_of_speech,
                 "romanized": w.word.romanized,
                 "translations": [{"text": t.text, "order_index": t.order_index} for t in w.word.translations],
                 "order_index": w.order_index

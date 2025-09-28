@@ -83,6 +83,7 @@ class SnippetWord(Base):
     id = Column(Integer, primary_key=True)
     snippet_id = Column(Integer, ForeignKey("snippets.id", ondelete="CASCADE"), nullable=False, index=True)
     word_id = Column(Integer, ForeignKey("words.id", ondelete="SET NULL"))
+    part_of_speech = Column(String(50))
     text = Column(String(255), nullable=False)
     order_index = Column(Integer, nullable=False)
 

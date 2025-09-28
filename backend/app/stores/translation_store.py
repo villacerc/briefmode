@@ -30,6 +30,7 @@ class TranslationStore:
 
             snippet_word = SnippetWord(
                 text=part["word"],
+                part_of_speech=part.get("part_of_speech", ""),
                 word_id=word.id,
                 snippet_id=ts_snippet.snippet_id,
                 order_index=i

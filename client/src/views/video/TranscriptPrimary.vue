@@ -34,8 +34,15 @@
           class="absolute bottom-full left-1/2 -translate-x-1/2 opacity-0 scale-90 invisible origin-bottom group-hover/word:visible group-hover/word:opacity-100 group-hover/word:scale-100 transition-opacity transition-transform duration-250 ease-out z-50"
         >
           <div class="mb-2">
-            <div class="card shadow-lg bg-base-100 rounded-xl p-3">
+            <div class="card shadow-lg bg-base-100 rounded-xl p-3 pt-2">
               <ul class="text-md text-base-content w-fit whitespace-nowrap">
+                <p class="font-bold mb-1">
+                  {{
+                    part.part_of_speech.charAt(0).toUpperCase() +
+                    part.part_of_speech.slice(1) +
+                    ":"
+                  }}
+                </p>
                 <li v-for="(t, i) in part.translations" :key="i">
                   {{ t.text }}
                 </li>

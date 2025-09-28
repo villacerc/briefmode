@@ -89,7 +89,7 @@ async def stream_translations(source_id: str, lang: str):
             raise ValueError(f"Language with code '{lang}' not found.")
 
         transcript_snippets = VideoService(db).fetch_transcript_snippets(source_id)
-        transcript_snippets = transcript_snippets[:5]
+        transcript_snippets = transcript_snippets[:5]  # Limit to first 5 snippets for testing
 
         chunk_size = 15
         for i in range(0, len(transcript_snippets), chunk_size):
