@@ -1,5 +1,6 @@
 # app/stores/translations_store.py
 from sqlalchemy.orm import Session
+from sqlalchemy.dialects.postgresql import insert
 from models import Word, Translation, SnippetTranslation, SnippetWord, TranscriptSnippet
 from app.services.helpers import sanitize_word
 
@@ -61,13 +62,15 @@ class TranslationStore:
         self.db.flush()
 
         for i, t in enumerate(translations): 
-            translation = Translation(
+            stmt = insert(Translation).values(
                 text=t["translation"],
                 word_id=new_word.id,
                 language_id=translation_lang_id,
                 order_index=i
+            ).on_conflict_do_nothing(
+                index_elements=["word_id", "language_id", "text"]
             )
-            self.db.add(translation)
+            self.db.execute(stmt)
 
         self.db.commit()
         self.db.refresh(new_word)

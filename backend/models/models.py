@@ -1,4 +1,4 @@
-from sqlalchemy import Index, Column, Integer, String, Float, Text, ForeignKey, DateTime, func
+from sqlalchemy import UniqueConstraint, Index, Column, Integer, String, Float, Text, ForeignKey, DateTime, func
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -126,6 +126,9 @@ class Translation(Base):
 
     __table_args__ = (
         Index("ix_translation_word_lang", "word_id", "language_id"),
+    )
+    __table_args__ = (
+        UniqueConstraint("word_id", "language_id", "text", name="uq_translation_word_lang_text"),
     )
 
 class Language(Base):

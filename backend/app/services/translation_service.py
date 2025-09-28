@@ -77,9 +77,9 @@ class TranslationService:
                     2. Capitalize the first word only if required by grammar.
                     3. Break down input into individual words or tokens, including:
                        - "word": original word
-                       - "part_of_speech": part of speech of the word (e.g., noun, verb, adjective, etc.)
+                       - "part_of_speech": only include the **main POS label** (e.g., "verb"), not long explanations.
                        - "romanized": Latin script romanization, "" if already Latin
-                       - "translations": main translation first, up to 2 alternatives
+                       - "translations": at least three translation candidates if possible.
                     4. "romanized" must never contain non-Latin characters.
                     5. Use properly formatted JSON, double quotes, no trailing commas.
 
