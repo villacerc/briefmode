@@ -1,6 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
-from models import Video, TranscriptSnippet, Snippet, SnippetWord, Word
+from models import Video, TranscriptSnippet, Snippet, SnippetWord, Word, Language
+from app.services.helpers import sanitize_phrase
 
 class VideoStore:
     def __init__(self, db):
@@ -27,20 +28,22 @@ class VideoStore:
             return video.transcript_snippets
         return None
 
-    def save_transcript_snippets(self, source_id: str, language_id: int, transcript_data):
+    def save_transcript_snippets(self, source_id: str, language: Language, transcript_data):
         video = Video(source_id=source_id)
         self.db.add(video)
         self.db.flush()
 
         transcript_snippets = []
         for i, item in enumerate(transcript_data.snippets):
-            snippet = Snippet(language_id=language_id, text=item.text)
+            sanitized_phrase = sanitize_phrase(item.text, language.code)
+            snippet = Snippet(language=language, text=sanitized_phrase)
             self.db.add(snippet)
             self.db.flush()
             
             ts_snippet = TranscriptSnippet(
                 video_id=video.id,
                 snippet_id=snippet.id,
+                text=item.text,
                 start=item.start,
                 end=transcript_data[i + 1].start if i < len(transcript_data) - 1 else item.start + item.duration,
                 duration=item.duration

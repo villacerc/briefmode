@@ -29,4 +29,4 @@ class VideoService:
             )
 
         # Persist new video + transcript
-        return self.store.save_transcript_snippets(source_id, language.id, transcript_data)
+        return self.store.save_transcript_snippets(source_id, language, transcript_data)

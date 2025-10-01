@@ -24,6 +24,7 @@ class TranscriptSnippet(Base):
     id = Column(Integer, primary_key=True)
     video_id = Column(Integer, ForeignKey("videos.id", ondelete="CASCADE"), nullable=False)
     snippet_id = Column(Integer, ForeignKey("snippets.id", ondelete="CASCADE"), nullable=False, unique=True)
+    text = Column(Text, nullable=False)
     start = Column(Float, nullable=False)
     end = Column(Float, nullable=False)
     duration = Column(Float, nullable=False)

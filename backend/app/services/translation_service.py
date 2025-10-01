@@ -133,7 +133,7 @@ class TranslationService:
 
             return {
                 "snippet_id": ts_snippet.id,
-                "text": ts_snippet.snippet.text,
+                "text": ts_snippet.text,
                 "translation": snippet_translation.text if snippet_translation else "",
                 "transcript_language": ts_snippet.snippet.language.code,
                 "translation_language": translation_lang.code,
