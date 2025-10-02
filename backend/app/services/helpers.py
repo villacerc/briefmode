@@ -3,6 +3,30 @@ import regex
 import unicodedata
 
 NO_SPACE_LANGUAGES = ["ja", "zh", "th", "lo", "km", "my", "bo", "mn"]
+GPT_MODEL = "gpt-4.1-nano"
+
+def validate_interpretation_json(parsed: dict) -> None:
+    """
+    Validates the structure and content of the parsed interpretation JSON.
+    Raises ValueError if something is invalid.
+    """
+
+    # Must contain required top-level fields
+    required_keys = {"is_interpretable", "is_word", "language_code", "normalized_text"}
+    if not required_keys.issubset(parsed.keys()):
+        raise ValueError(f"Missing required keys: {required_keys - parsed.keys()}")
+
+    if not isinstance(parsed["is_interpretable"], bool):
+        raise ValueError("'is_interpretable' must be a boolean")
+
+    if not isinstance(parsed["is_word"], bool):
+        raise ValueError("'is_word' must be a boolean")
+
+    if parsed["language_code"] is not None and not isinstance(parsed["language_code"], str):
+        raise ValueError("'language_code' must be a string or null")
+
+    if parsed["normalized_text"] is not None and not isinstance(parsed["normalized_text"], str):
+        raise ValueError("'normalized_text' must be a string or null")
 
 def validate_translation_json(parsed: dict, snippet_text: str) -> None:
     """
@@ -101,3 +125,13 @@ def sanitize_phrase(phrase: str, lang: str = "en") -> str:
         phrase = sanitize_word(phrase)
 
     return phrase
+
+async def retry_with_backoff(coro, retries=5, base_delay=1):
+    for attempt in range(retries):
+        try:
+            return await coro
+        except Exception as e:
+            if attempt == retries - 1:
+                raise RuntimeError(f"Operation failed after {retries} attempts. {str(e)}") from e
+            delay = base_delay * (2 ** attempt) + random.uniform(0, 0.5)
+            await asyncio.sleep(delay)

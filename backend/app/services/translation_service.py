@@ -3,7 +3,7 @@ import asyncio
 import json
 from models import TranscriptSnippet, Language, Word, Translation, Video, SnippetWord
 from app.stores import TranslationStore, VideoStore
-from .helpers import validate_translation_json
+from .helpers import validate_translation_json, retry_with_backoff, GPT_MODEL
 from openai import AsyncOpenAI
 from typing import List, Dict
 import os
@@ -48,16 +48,6 @@ class TranslationService:
         video = self.video_store.get_video(ts_snippet.video_id)
         return self.get_normalized_translated_snippet(ts_snippet, translation_lang, video)
 
-    async def retry_with_backoff(self, coro, retries=5, base_delay=1):
-        for attempt in range(retries):
-            try:
-                return await coro
-            except Exception as e:
-                if attempt == retries - 1:
-                    raise RuntimeError(f"Operation failed after {retries} attempts. {str(e)}") from e
-                delay = base_delay * (2 ** attempt) + random.uniform(0, 0.5)
-                await asyncio.sleep(delay)
-
     def ts_snippet_has_translation_for_language(self, snippet_id: int, lang_id: int) -> bool:
         translation = self.store.get_snippet_translation_by_language(snippet_id, lang_id)
         return translation is not None
@@ -67,9 +57,9 @@ class TranslationService:
         max_retries = 3
         for attempt in range(max_retries):
             # Call the AI model
-            response = await self.retry_with_backoff(
+            response = await retry_with_backoff(
                 self.async_openai_client.responses.create(
-                    model="gpt-4.1-nano",
+                    model=GPT_MODEL,
                     input=f"""
                     Translate the input below to {translation_lang.name}.
                     Rules:

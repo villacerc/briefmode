@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from models import TranscriptSnippet, Language
 from database import get_db
 import logging
-from app.services import VideoService, TranslationService
+from app.services import VideoService, TranslationService, DictionaryService
 from app.stores import LanguageStore
 
 logging.basicConfig(level=logging.INFO)
@@ -47,7 +47,20 @@ async def root():
         "version": "1.0.0"
     }
 
-# Fetch translation for a specific video ID.
+@app.get("/api/dictionary/{input}", summary="Get Input Definition")
+async def get_input_definition(input: str):
+    db = next(get_db())
+    try:
+        interpretation = await DictionaryService(db).get_dictionary_entry(input)
+        return {"data": interpretation}
+    except Exception as e:
+        message = f"Error occurred while attempting to fetch input definition for '{input}'. {e}"
+        logger.error(message)
+        raise HTTPException(
+            status_code=500,
+            detail=message
+        )
+
 @app.get("/api/video/{source_id}", summary="Get Video Translation")
 def get_video(source_id: str, lang: str):
     try:
