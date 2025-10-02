@@ -3,7 +3,8 @@ import asyncio
 import json
 from models import TranscriptSnippet, Language, Word, Translation, Video, SnippetWord
 from app.stores import TranslationStore, VideoStore
-from .helpers import validate_translation_json, retry_with_backoff, GPT_MODEL
+from .helpers import retry_with_backoff, GPT_MODEL
+from app.services.json_validators import validate_translation_json
 from openai import AsyncOpenAI
 from typing import List, Dict
 import os

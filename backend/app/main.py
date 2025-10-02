@@ -48,11 +48,15 @@ async def root():
     }
 
 @app.get("/api/dictionary/{input}", summary="Get Input Definition")
-async def get_input_definition(input: str):
+async def get_input_definition(input: str, lang: str):
     db = next(get_db())
     try:
-        interpretation = await DictionaryService(db).get_dictionary_entry(input)
-        return {"data": interpretation}
+        target_lang = LanguageStore(db).get_by_code(lang)
+        if not target_lang:
+            raise ValueError(f"Language with code '{lang}' not found.")
+
+        dictionary_entry = await DictionaryService(db).get_dictionary_entry(input, target_lang)
+        return {"data": dictionary_entry}
     except Exception as e:
         message = f"Error occurred while attempting to fetch input definition for '{input}'. {e}"
         logger.error(message)
@@ -60,6 +64,8 @@ async def get_input_definition(input: str):
             status_code=500,
             detail=message
         )
+    finally:
+        db.close()
 
 @app.get("/api/video/{source_id}", summary="Get Video Translation")
 def get_video(source_id: str, lang: str):
