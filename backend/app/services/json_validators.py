@@ -107,13 +107,16 @@ def validate_translation_json(parsed: dict, snippet_text: str) -> None:
             raise ValueError(f"word_parts[{i}] must be an object")
 
         # Required keys in each word part
-        for key in ("word", "romanized", "translations"):
+        for key in ("word", "part_of_speech", "romanized", "translations"):
             if key not in part:
                 raise ValueError(f"word_parts[{i}] is missing key '{key}'")
 
         if not isinstance(part["word"], str):
             raise ValueError(f"word_parts[{i}]['word'] must be a string")
-        
+
+        if not isinstance(part["part_of_speech"], str):
+            raise ValueError(f"word_parts[{i}]['part_of_speech'] must be a string")
+
         if part["word"] not in snippet_text:
             raise ValueError(f"word_parts[{i}]['word'] '{part['word']}' not found in snippet text")
 
@@ -133,11 +136,7 @@ def validate_translation_json(parsed: dict, snippet_text: str) -> None:
             raise ValueError(f"word_parts[{i}]['translations'] must be a list")
 
         for j, t in enumerate(translations, start=1):
-            if not isinstance(t, dict) or "translation" not in t:
+            if not isinstance(t, str):
                 raise ValueError(
-                    f"word_parts[{i}]['translations'][{j}] must be an object with key 'translation'"
-                )
-            if not isinstance(t["translation"], str):
-                raise ValueError(
-                    f"word_parts[{i}]['translations'][{j}]['translation'] must be a string"
+                    f"word_parts[{i}]['translations'][{j}] must be a string"
                 )

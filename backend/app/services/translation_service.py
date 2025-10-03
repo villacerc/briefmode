@@ -14,7 +14,7 @@ class TranslationService:
 
     def __init__(self, db):
         self.db = db
-        self.store = TranslationStore(db)
+        self.translation_store = TranslationStore(db)
         self.video_store = VideoStore(db)
         self.async_openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))  # Assume this is initialized elsewhere
 
@@ -44,13 +44,13 @@ class TranslationService:
         parsed_json = await self.fetch_ai_translation(ts_snippet.snippet.text, translation_lang)
 
         # Save to DB
-        self.store.save_translation(ts_snippet, translation_lang.id, parsed_json)
+        self.translation_store.save_translation(ts_snippet, translation_lang.id, parsed_json)
 
         video = self.video_store.get_video(ts_snippet.video_id)
         return self.get_normalized_translated_snippet(ts_snippet, translation_lang, video)
 
     def ts_snippet_has_translation_for_language(self, snippet_id: int, lang_id: int) -> bool:
-        translation = self.store.get_snippet_translation_by_language(snippet_id, lang_id)
+        translation = self.translation_store.get_snippet_translation_by_language(snippet_id, lang_id)
         return translation is not None
 
     async def fetch_ai_translation(self, snippet_text, translation_lang):
@@ -83,7 +83,7 @@ class TranslationService:
                           "word": "<original word>",
                           "part_of_speech": "<part of speech>",
                           "romanized": "<romanized form in Latin or ''>",
-                          "translations": [{{ "translation": "<translated word>" }}]
+                          "translations": "<a list of at least three translation candidates if possible>"
                         }}
                       ]
                     }}
@@ -112,13 +112,13 @@ class TranslationService:
         try:
             snippet_words = ts_snippet.snippet.snippet_words
 
-            snippet_translation = self.store.get_snippet_translation_by_language(ts_snippet.snippet_id, translation_lang.id)
+            snippet_translation = self.translation_store.get_snippet_translation_by_language(ts_snippet.snippet_id, translation_lang.id)
 
             normalized_snippet_words = [{
                 "text": w.text,
-                "part_of_speech": w.part_of_speech,
+                "part_of_speech": w.part_of_speech_tag,
                 "romanized": w.word.romanized,
-                "translations": [{"text": t.text, "order_index": t.order_index} for t in w.word.translations],
+                "translations": [{"text": t.text} for t in w.word.translations],
                 "order_index": w.order_index
             } for w in snippet_words]
 

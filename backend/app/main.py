@@ -52,11 +52,8 @@ async def get_input_definition(input: str, lang: str):
     db = next(get_db())
     try:
         target_lang = LanguageStore(db).get_by_code(lang)
-        if not target_lang:
-            raise ValueError(f"Language with code '{lang}' not found.")
-
         dictionary_entry = await DictionaryService(db).get_dictionary_entry(input, target_lang)
-        return {"data": dictionary_entry}
+        return dictionary_entry
     except Exception as e:
         message = f"Error occurred while attempting to fetch input definition for '{input}'. {e}"
         logger.error(message)
@@ -104,9 +101,6 @@ async def stream_translations(source_id: str, lang: str):
 
     try:
         translation_lang = LanguageStore(db).get_by_code(lang)
-        if not translation_lang:
-            raise ValueError(f"Language with code '{lang}' not found.")
-
         transcript_snippets = VideoService(db).fetch_transcript_snippets(source_id)
         transcript_snippets = transcript_snippets[:5]  # Limit to first 5 snippets for testing
 
@@ -118,6 +112,8 @@ async def stream_translations(source_id: str, lang: str):
                 yield json.dumps({"message": "Chunk translated", "data": translated_chunk}, ensure_ascii=False) + "\n"
             except Exception as e:
                 yield json.dumps({"message": "Failed to translate chunk", "chunk_index": i, "error": str(e)}, ensure_ascii=False) + "\n"
+    except Exception as e:
+        raise RuntimeError(f"Error streaming translations for video (id: {source_id}). {e}")
     finally:
         db.close()
 

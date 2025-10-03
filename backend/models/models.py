@@ -48,14 +48,15 @@ class Snippet(Base):
     created_at = Column(DateTime, server_default=func.now())
 
     language = relationship("Language", back_populates="snippets")
-    snippet_words = relationship("SnippetWord", back_populates="snippet", cascade="all, delete-orphan", order_by="SnippetWord.order_index")
+    snippet_words = relationship("SnippetWord", back_populates="snippet", cascade="all, delete-orphan")
     translations = relationship("SnippetTranslation", back_populates="snippet", cascade="all, delete-orphan")
     transcript_snippet = relationship(
         "TranscriptSnippet",
         back_populates="snippet",
-        uselist=False,
+        uselist=False, # one-to-one relationship
         cascade="all, delete-orphan",
     )
+    pos_example = relationship("DictionaryPOS", back_populates="normalized_example", uselist=False)
 
     __table_args__ = (
         Index("ix_snippet_text_lang", "text", "language_id"),
@@ -78,13 +79,28 @@ class SnippetTranslation(Base):
         Index("ix_snippet_translations_snippet_lang", "snippet_id", "language_id", unique=True),
     )
 
+class DictionaryPOS(Base):
+    __tablename__ = "dictionary_pos"
+
+    id = Column(Integer, primary_key=True)
+    word_id = Column(Integer, ForeignKey("words.id", ondelete="CASCADE"), nullable=False, index=True)
+    snippet_id = Column(Integer, ForeignKey("snippets.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(50), unique=True, nullable=False)
+    description = Column(Text)
+    example = Column(Text, nullable=False)
+
+    created_at = Column(DateTime, server_default=func.now())
+
+    normalized_example = relationship("Snippet", back_populates="pos_example", uselist=False)
+    word = relationship("Word", back_populates="pos_examples")
+
 class SnippetWord(Base):
     __tablename__ = "snippet_words"
 
     id = Column(Integer, primary_key=True)
     snippet_id = Column(Integer, ForeignKey("snippets.id", ondelete="CASCADE"), nullable=False, index=True)
     word_id = Column(Integer, ForeignKey("words.id", ondelete="SET NULL"))
-    part_of_speech = Column(String(50))
+    part_of_speech_tag = Column(String(50))
     text = Column(String(255), nullable=False)
     order_index = Column(Integer, nullable=False)
 
@@ -106,6 +122,7 @@ class Word(Base):
     language = relationship("Language", back_populates="words")
     snippet_words = relationship("SnippetWord", back_populates="word")
     translations = relationship("Translation", back_populates="word", cascade="all, delete-orphan")
+    pos_examples = relationship("DictionaryPOS", back_populates="word", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("ix_word_text_lang", "text", "language_id", unique=True),
@@ -118,7 +135,6 @@ class Translation(Base):
     word_id = Column(Integer, ForeignKey("words.id", ondelete="CASCADE"), nullable=False)
     language_id = Column(Integer, ForeignKey("languages.id"), nullable=False)
     text = Column(Text, nullable=False)
-    order_index = Column(Integer, nullable=False)
     
     created_at = Column(DateTime, server_default=func.now())
 

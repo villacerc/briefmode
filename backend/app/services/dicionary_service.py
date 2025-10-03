@@ -2,15 +2,17 @@
 from openai import AsyncOpenAI
 from app.services.json_validators import validate_interpretation_json, validate_dictionary_entry_json
 from app.services.helpers import retry_with_backoff, GPT_MODEL
-from app.stores import LanguageStore
-from models import Language
+from app.stores import LanguageStore, TranslationStore, DictionaryStore
+from models import Language, DictionaryPOS, Word
 import os
 import json
 
 class DictionaryService:
     def __init__(self, db):
         self.db = db
+        self.translation_store = TranslationStore(db)
         self.language_store = LanguageStore(db)
+        self.dictionary_store = DictionaryStore(db)
         self.async_openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     async def get_dictionary_entry(self, text: str, target_lang: Language):
@@ -20,22 +22,44 @@ class DictionaryService:
             if interpretation["is_interpretable"]:
                 # TODO: check if text exists in DB
 
+                # TEMPORARY: assumes text is a word, not a phrase
                 source_lang = self.language_store.get_by_code(interpretation["language_code"])
-                if not source_lang:
-                    raise ValueError(f"Language with code '{interpretation['language_code']}' not found.")
-
+    
                 dictionary_entry = await self.fetch_ai_dictionary_entry(
                     interpretation["normalized_text"],
                     source_lang,
                     target_lang
                 )
 
-                #TODO: save to DB
+                word = self.dictionary_store.save_dictionary_entry(
+                    dictionary_entry,
+                    source_lang.id,
+                    target_lang.id
+                )
 
-                return dictionary_entry
+                return self.get_normalized_dictionary_entry(word, target_lang)
 
         except Exception as e:
             raise RuntimeError(f"Error getting dictionary entry for '{text}'. {e}")
+
+    def get_normalized_dictionary_entry(self, word: Word, target_lang: Language):
+        try:
+            translations = self.translation_store.get_word_translations_by_lang(word.id, target_lang.id)
+            dictionary_pos = self.dictionary_store.get_dictionary_pos_by_lang(word.id, target_lang.id)
+
+            return {
+                "word": word.text,
+                "romanized": word.romanized,
+                "translations": [t.text for t in translations],
+                "parts_of_speech": [{
+                    "name": pos.name,
+                    "definition": pos.description,
+                    "example": pos.example,
+                    "example_translation": pos.normalized_example.translations[0].text
+                } for pos in dictionary_pos]
+            }
+        except Exception as e:
+            raise RuntimeError(f"Error getting normalized dictionary entry for word ID '{word.id}'. {e}")
 
     async def fetch_ai_text_interpretation(self, text: str):
         parsed_json = None
