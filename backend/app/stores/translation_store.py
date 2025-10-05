@@ -2,7 +2,7 @@
 from typing import List
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.postgresql import insert
-from models import Translation, SnippetTranslation, SnippetWord, TranscriptSnippet
+from models import Translation, SnippetTranslation, SnippetWord, TranscriptSnippet, Snippet, Language
 from app.services.helpers import sanitize_word
 from app.stores.word_store import WordStore
 
@@ -23,26 +23,27 @@ class TranslationStore:
             SnippetTranslation.language_id == lang_id
         ).first()
 
-    def save_translation(self, ts_snippet: TranscriptSnippet, translation_lang_id: int, parsed_json: dict):
+    def save_snippet_translation(self, snippet: Snippet, translation_lang: Language, parsed_json: dict):
         # Save translation snippet
         snippet_translation = SnippetTranslation(
             text=parsed_json.get("translation", ""),
-            snippet_id=ts_snippet.snippet_id,
-            language_id=translation_lang_id,
+            snippet_id=snippet.id,
+            language_id=translation_lang.id,
         )
         self.db.add(snippet_translation)
         self.db.flush()
 
         # Save words & translations
         for i, part in enumerate(parsed_json.get("word_parts", [])):
-            source_lang_id = ts_snippet.snippet.language_id
+            source_lang_id = snippet.language_id
+            translation_lang_id = translation_lang.id   
             word = self.word_store.save_word(part["word"], part["romanized"], part.get("translations", []), source_lang_id, translation_lang_id)
 
             snippet_word = SnippetWord(
                 text=part["word"],
                 part_of_speech_tag=part["part_of_speech"],
                 word_id=word.id,
-                snippet_id=ts_snippet.snippet_id,
+                snippet_id=snippet.id,
                 order_index=i
             )
             self.db.add(snippet_word)

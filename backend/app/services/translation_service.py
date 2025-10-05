@@ -41,10 +41,10 @@ class TranslationService:
             return self.get_normalized_translated_snippet(ts_snippet, translation_lang, video)
 
         # Call AI, parse JSON, etc.
-        parsed_json = await self.fetch_ai_translation(ts_snippet.snippet.text, translation_lang)
+        parsed_json = await self.fetch_ai_snippet_translation(ts_snippet.snippet.text, translation_lang)
 
         # Save to DB
-        self.translation_store.save_translation(ts_snippet, translation_lang.id, parsed_json)
+        self.translation_store.save_snippet_translation(ts_snippet.snippet, translation_lang.id, parsed_json)
 
         video = self.video_store.get_video(ts_snippet.video_id)
         return self.get_normalized_translated_snippet(ts_snippet, translation_lang, video)
@@ -53,7 +53,7 @@ class TranslationService:
         translation = self.translation_store.get_snippet_translation_by_language(snippet_id, lang_id)
         return translation is not None
 
-    async def fetch_ai_translation(self, snippet_text, translation_lang):
+    async def fetch_ai_snippet_translation(self, snippet_text, translation_lang):
         parsed_json = None
         max_retries = 3
         for attempt in range(max_retries):

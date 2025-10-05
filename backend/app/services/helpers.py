@@ -13,7 +13,7 @@ def sanitize_word(word: str) -> str:
     word = word.casefold()
 
     # 3. Remove ASCII punctuation except apostrophe
-    word = re.sub(r"[!\"#$%&()*+,-./:;<=>?@[\\\]^_`{|}~]", "", word)
+    word = re.sub(r"[!¡¿\"#$%&()*+,\-./:;<=>?@[\\\]^_`{|}~]", "", word)
 
     # 4. Collapse whitespace
     word = re.sub(r"\s+", " ", word).strip()

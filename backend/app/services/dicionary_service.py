@@ -2,6 +2,7 @@
 from openai import AsyncOpenAI
 from app.services.json_validators import validate_interpretation_json, validate_dictionary_entry_json
 from app.services.helpers import retry_with_backoff, GPT_MODEL
+from app.services.translation_service import TranslationService
 from app.stores import LanguageStore, TranslationStore, DictionaryStore
 from models import Language, DictionaryPOS, Word
 import os
@@ -13,6 +14,7 @@ class DictionaryService:
         self.translation_store = TranslationStore(db)
         self.language_store = LanguageStore(db)
         self.dictionary_store = DictionaryStore(db)
+        self.translation_service = TranslationService(db)
         self.async_openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     async def get_dictionary_entry(self, text: str, target_lang: Language):
@@ -31,10 +33,11 @@ class DictionaryService:
                     target_lang
                 )
 
-                word = self.dictionary_store.save_dictionary_entry(
+                word = await self.dictionary_store.save_dictionary_entry(
                     dictionary_entry,
-                    source_lang.id,
-                    target_lang.id
+                    self.translation_service.fetch_ai_snippet_translation,
+                    source_lang,
+                    target_lang
                 )
 
                 return self.get_normalized_dictionary_entry(word, target_lang)
@@ -123,8 +126,6 @@ class DictionaryService:
                         • Part of speech (in English)
                         • Definition (in the target language)
                         • Example sentence in the source language’s native script
-                        • Translation of that example sentence in the target language
-
                     {{
                     "word": "<original input word>",
                     "romanized": "<romanized form of input word if not Latin script, otherwise empty string",
@@ -132,9 +133,8 @@ class DictionaryService:
                     "parts_of_speech": [
                             {{
                             "part_of_speech": "<part of speech in english>",
-                            "definition": "<definition of the word in the target language>",
+                            "definition": "<definition of the word in the **target** language>",
                             "example": "<example sentence in the source language's script>",
-                            "example_translation": "<Translation of that example sentence in the target language>"
                             }}
                         ]
                     }}
