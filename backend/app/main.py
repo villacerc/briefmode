@@ -102,7 +102,7 @@ async def stream_translations(source_id: str, lang: str):
     try:
         translation_lang = LanguageStore(db).get_by_code(lang)
         transcript_snippets = VideoService(db).fetch_transcript_snippets(source_id)
-        transcript_snippets = transcript_snippets[:5]  # Limit to first 5 snippets for testing
+        transcript_snippets = transcript_snippets[:2]  # Limit to first 2 snippets for testing
 
         chunk_size = 15
         for i in range(0, len(transcript_snippets), chunk_size):

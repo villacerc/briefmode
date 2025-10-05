@@ -4,9 +4,39 @@ import unicodedata
 import asyncio
 import random
 import unicodedata
+from openai import AsyncOpenAI
+import os
+import json
 
 NO_SPACE_LANGUAGES = ["ja", "zh", "th", "lo", "km", "my", "bo", "mn"]
 GPT_MODEL = "gpt-4.1-nano"
+
+async def fetch_ai_data(prompt: str, validate_fetched_ai_json: callable) -> dict:
+    async_openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    
+    parsed_json = None
+    max_retries = 3
+    for attempt in range(max_retries):
+        response = await retry_with_backoff(
+            async_openai_client.responses.create(
+                model=GPT_MODEL,
+                input=prompt,
+                store=False
+            )
+        )
+
+        raw_text = response.output[0].content[0].text.strip()
+        try:
+            parsed_json = json.loads(raw_text)
+            validate_fetched_ai_json(parsed_json)
+            return parsed_json
+        except (json.JSONDecodeError, ValueError) as e:
+            print(
+                f"Attempt {attempt + 1}/{max_retries} failed: {type(e).__name__} - {e}. Retrying..."
+            )
+            if attempt == max_retries - 1:
+                raise RuntimeError(f"Failed to fetch AI data after {max_retries} attempts. Last error: {e}") from e
+            await asyncio.sleep(1)
 
 def is_latin_script(text: str) -> bool:
     """Return True if all alphabetic characters are from the Latin script."""

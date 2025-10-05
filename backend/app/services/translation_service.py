@@ -1,13 +1,9 @@
 # app/services/translation_service.py
-import asyncio
-import json
 from models import TranscriptSnippet, Language, Word, Translation, Video, SnippetWord
 from app.stores import TranslationStore, VideoStore
-from .helpers import retry_with_backoff, GPT_MODEL
 from .json_validators import validate_translation_json
-from openai import AsyncOpenAI
+from .helpers import fetch_ai_data
 from typing import List, Dict
-import os
 
 class TranslationService:
     SEMAPHORE_CONCURRENCY = 10
@@ -16,7 +12,6 @@ class TranslationService:
         self.db = db
         self.translation_store = TranslationStore(db)
         self.video_store = VideoStore(db)
-        self.async_openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))  # Assume this is initialized elsewhere
 
     async def get_translations(self, ts_snippets: List[TranscriptSnippet], translation_lang: Language) -> List[Dict]:
         # Create a semaphore to limit concurrency to avoid overloading API and database
@@ -54,15 +49,9 @@ class TranslationService:
         return translation is not None
 
     async def fetch_ai_snippet_translation(self, snippet_text, translation_lang):
-        parsed_json = None
-        max_retries = 3
-        for attempt in range(max_retries):
-            # Call the AI model
-            response = await retry_with_backoff(
-                self.async_openai_client.responses.create(
-                    model=GPT_MODEL,
-                    input=f"""
-                    Translate the input below to {translation_lang.name}.
+        try:
+            prompt = f"""
+                   Translate the input below to {translation_lang.name}.
                     Rules:
                     1. Respond ONLY with valid JSON. Do NOT include explanations, comments, or extra text.
                     2. Capitalize the first word only if required by grammar.
@@ -77,6 +66,7 @@ class TranslationService:
                     Output JSON format:
 
                     {{
+                      "snippet_text": "<original input text>",
                       "translation": "<full translated sentence here>",
                       "word_parts": [
                         {{
@@ -90,23 +80,11 @@ class TranslationService:
 
                     Input:
                     {snippet_text}
-                    """,
-                    store=False
-                )
-            )
-
-            raw_text = response.output[0].content[0].text.strip()
-            try:
-                parsed_json = json.loads(raw_text)
-                validate_translation_json(parsed_json, snippet_text)
-                return parsed_json
-            except (json.JSONDecodeError, ValueError) as e:
-                print(
-                    f"Attempt {attempt + 1}/{max_retries} failed: {type(e).__name__} - {e}. Retrying..."
-                )
-                if attempt == max_retries - 1:
-                    raise RuntimeError(f"Failed to parse AI response after {max_retries} attempts. Last error: {e}") from e
-                await asyncio.sleep(1)
+                    """
+            parsed_json = await fetch_ai_data(prompt, validate_translation_json)
+            return parsed_json
+        except Exception as e:
+            raise RuntimeError(f"Error fetching AI snippet translation for '{snippet_text}'. {e}")
 
     def get_normalized_translated_snippet(self, ts_snippet: TranscriptSnippet, translation_lang: Language, video: Video) -> Dict:
         try:

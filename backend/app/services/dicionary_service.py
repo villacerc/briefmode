@@ -1,12 +1,8 @@
 
-from openai import AsyncOpenAI
 from .json_validators import validate_interpretation_json, validate_dictionary_entry_json
-from .helpers import retry_with_backoff, GPT_MODEL
+from .helpers import fetch_ai_data
 from app.stores import LanguageStore, TranslationStore, DictionaryStore, WordStore
 from models import Language, DictionaryPOS, Word
-import os
-import json
-import asyncio
 
 class DictionaryService:
     def __init__(self, db):
@@ -15,7 +11,6 @@ class DictionaryService:
         self.language_store = LanguageStore(db)
         self.dictionary_store = DictionaryStore(db)
         self.word_store = WordStore(db)
-        self.async_openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     async def get_dictionary_entry(self, text: str, target_lang: Language):
         try:
@@ -87,13 +82,8 @@ class DictionaryService:
             raise RuntimeError(f"Error getting normalized dictionary entry for word ID '{word.id}'. {e}")
 
     async def fetch_ai_text_interpretation(self, text: str):
-        parsed_json = None
-        max_retries = 3
-        for attempt in range(max_retries):
-            response = await retry_with_backoff(
-                self.async_openai_client.responses.create(
-                    model=GPT_MODEL,
-                    input=f"""
+        try:
+            prompt = f"""
                     You are a dictionary assistant.
                     Given a string input, determine whether it can be interpreted as belonging to a natural language and whether it represents a word or a phrase. 
                     Then produce a JSON response following the rules below.
@@ -112,32 +102,15 @@ class DictionaryService:
                     }}
 
                     Input: {text}
-                    """,
-                    store=False
-                )
-            )
-
-            raw_text = response.output[0].content[0].text.strip()
-            try:
-                parsed_json = json.loads(raw_text)
-                validate_interpretation_json(parsed_json)
-                return parsed_json
-            except (json.JSONDecodeError, ValueError) as e:
-                print(
-                    f"Attempt {attempt + 1}/{max_retries} failed: {type(e).__name__} - {e}. Retrying..."
-                )
-                if attempt == max_retries - 1:
-                    raise RuntimeError(f"Failed to parse AT Input Interpretation response after {max_retries} attempts. Last error: {e}") from e
-                await asyncio.sleep(1)
+                    """
+            parsed_json = await fetch_ai_data(prompt, validate_interpretation_json)
+            return parsed_json
+        except Exception as e:
+            raise RuntimeError(f"Error fetching AI text interpretation for '{text}'. {e}")
 
     async def fetch_ai_dictionary_entry(self, input: str, source_lang: Language, target_lang: Language):
-        parsed_json = None
-        max_retries = 3
-        for attempt in range(max_retries):
-            response = await retry_with_backoff(
-                self.async_openai_client.responses.create(
-                    model=GPT_MODEL,
-                    input=f"""
+        try:
+            prompt = f"""
                     You are a dictionary assistant. 
                     Given a word, a source language, and a target language, produce a JSON response according to the rules below.
 
@@ -164,20 +137,8 @@ class DictionaryService:
                     Input word: {input}
                     Source language: {source_lang.name}
                     Target language: {target_lang.name}
-                    """,
-                    store=False
-                )
-            )
-
-            raw_text = response.output[0].content[0].text.strip()
-            try:
-                parsed_json = json.loads(raw_text)
-                validate_dictionary_entry_json(parsed_json)
-                return parsed_json
-            except (json.JSONDecodeError, ValueError) as e:
-                print(
-                    f"Attempt {attempt + 1}/{max_retries} failed: {type(e).__name__} - {e}. Retrying..."
-                )
-                if attempt == max_retries - 1:
-                    raise RuntimeError(f"Failed to parse AT Input Interpretation response after {max_retries} attempts. Last error: {e}") from e
-                await asyncio.sleep(1)
+                    """
+            parsed_json = await fetch_ai_data(prompt, validate_dictionary_entry_json)
+            return parsed_json
+        except Exception as e:
+            raise RuntimeError(f"Error fetching AI dictionary entry for '{input}'. {e}")
