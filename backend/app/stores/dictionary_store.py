@@ -13,13 +13,13 @@ class DictionaryStore:
         self.translation_store = TranslationStore(db)
         self.translation_service = TranslationService(db)
 
-    def get_dictionary_pos_by_lang(self, word_id: int, target_lang_id: int) -> List[DictionaryPOS]:
+    def get_word_dictionary_pos_by_lang(self, word_id: int, target_lang_id: int) -> List[DictionaryPOS]:
         return self.db.query(DictionaryPOS).join(Snippet).join(Snippet.translations).filter(
             DictionaryPOS.word_id == word_id,
             SnippetTranslation.language_id == target_lang_id
         ).all()
 
-    async def save_dictionary_entry(self, data: dict, source_lang: Language, target_lang: Language) -> Word:
+    async def save_word_dictionary_entry(self, data: dict, source_lang: Language, target_lang: Language) -> Word:
         word = self.word_store.save_word(
             word_text=data["word"],
             romanized=data["romanized"],

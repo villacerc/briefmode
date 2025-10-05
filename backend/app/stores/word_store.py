@@ -6,22 +6,18 @@ from app.services.helpers import sanitize_word, is_latin_script
 class WordStore:
     def __init__(self, db: Session):
         self.db = db
-    
-    def word_exists(self, word_text: str, lang_id: int) -> bool:
+
+    def get_word_by_lang(self, word_text: str, lang_id: int) -> Word:
         word_sanitized = sanitize_word(word_text)
-        existing_word = self.db.query(Word).filter(
+        return self.db.query(Word).filter(
             Word.text == word_sanitized,
             Word.language_id == lang_id
         ).first()
-        return existing_word is not None
 
     def save_word(self, word_text: str, romanized: str, translations: list, source_lang_id: int, target_lang_id: int) -> Word:
         word_sanitized = sanitize_word(word_text)
 
-        existing_word = self.db.query(Word).filter(
-            Word.text == word_sanitized,
-            Word.language_id == source_lang_id
-        ).first()
+        existing_word = self.get_word_by_lang(word_sanitized, source_lang_id)
 
         if existing_word:
             return existing_word

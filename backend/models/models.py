@@ -85,7 +85,7 @@ class DictionaryPOS(Base):
     id = Column(Integer, primary_key=True)
     word_id = Column(Integer, ForeignKey("words.id", ondelete="CASCADE"), nullable=False, index=True)
     snippet_id = Column(Integer, ForeignKey("snippets.id", ondelete="CASCADE"), nullable=False)
-    name = Column(String(50), unique=True, nullable=False)
+    name = Column(String(50), nullable=False)
     description = Column(Text)
     example = Column(Text, nullable=False)
 
@@ -93,6 +93,10 @@ class DictionaryPOS(Base):
 
     normalized_example = relationship("Snippet", back_populates="pos_example", uselist=False)
     word = relationship("Word", back_populates="pos_examples")
+
+    __table_args__ = (
+        UniqueConstraint("word_id", "name", name="uq_word_pos_name"),
+    )
 
 class SnippetWord(Base):
     __tablename__ = "snippet_words"

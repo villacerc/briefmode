@@ -14,6 +14,7 @@ class DictionaryService:
         self.translation_store = TranslationStore(db)
         self.language_store = LanguageStore(db)
         self.dictionary_store = DictionaryStore(db)
+        self.word_store = WordStore(db)
         self.async_openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     async def get_dictionary_entry(self, text: str, target_lang: Language):
@@ -22,6 +23,19 @@ class DictionaryService:
 
             if interpretation["is_interpretable"]:
                 # TODO: check if text exists in DB
+                source_lang = self.language_store.get_by_code(interpretation["language_code"])
+
+                word = self.word_store.get_word_by_lang(interpretation["normalized_text"], source_lang.id)
+                if word is not None:
+                    # check if POS exists for this word in target language
+                    dictionary_pos_list = self.dictionary_store.get_word_dictionary_pos_by_lang(word.id, target_lang.id)
+                    if len(dictionary_pos_list) > 0:
+                        data = self.get_normalized_dictionary_entry(word, target_lang)
+                        return {
+                            "is_interpretable": True,
+                            "is_word": interpretation["is_word"],
+                            "data": data
+                        }
 
                 # TEMPORARY: assumes text is a word, not a phrase
                 source_lang = self.language_store.get_by_code(interpretation["language_code"])
@@ -32,7 +46,7 @@ class DictionaryService:
                     target_lang
                 )
 
-                word = await self.dictionary_store.save_dictionary_entry(
+                word = await self.dictionary_store.save_word_dictionary_entry(
                     dictionary_entry,
                     source_lang,
                     target_lang
@@ -56,7 +70,7 @@ class DictionaryService:
     def get_normalized_dictionary_entry(self, word: Word, target_lang: Language):
         try:
             translations = self.translation_store.get_word_translations_by_lang(word.id, target_lang.id)
-            dictionary_pos = self.dictionary_store.get_dictionary_pos_by_lang(word.id, target_lang.id)
+            dictionary_pos = self.dictionary_store.get_word_dictionary_pos_by_lang(word.id, target_lang.id)
 
             return {
                 "word": word.text,
