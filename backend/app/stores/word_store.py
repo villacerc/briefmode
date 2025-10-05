@@ -1,11 +1,19 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.postgresql import insert
 from models import Word, Translation
-from app.services.helpers import sanitize_word
+from app.services.helpers import sanitize_word, is_latin_script
 
 class WordStore:
     def __init__(self, db: Session):
         self.db = db
+    
+    def word_exists(self, word_text: str, lang_id: int) -> bool:
+        word_sanitized = sanitize_word(word_text)
+        existing_word = self.db.query(Word).filter(
+            Word.text == word_sanitized,
+            Word.language_id == lang_id
+        ).first()
+        return existing_word is not None
 
     def save_word(self, word_text: str, romanized: str, translations: list, source_lang_id: int, target_lang_id: int) -> Word:
         word_sanitized = sanitize_word(word_text)
@@ -20,7 +28,7 @@ class WordStore:
 
         new_word = Word(
             text=word_sanitized,
-            romanized=romanized,
+            romanized=romanized if not is_latin_script(word_sanitized) else "",
             language_id=source_lang_id
         )
         self.db.add(new_word)

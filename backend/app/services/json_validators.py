@@ -1,6 +1,8 @@
 import re
 import regex
 
+latin_regex = regex.compile(r"^[\p{Latin}0-9\s\-\']*$")  # allow letters, numbers, spaces, hyphen, apostrophe
+
 def validate_dictionary_entry_json(parsed: dict) -> None:
     """
     Validates the structure and content of the parsed dictionary entry JSON.
@@ -21,9 +23,7 @@ def validate_dictionary_entry_json(parsed: dict) -> None:
     romanized = parsed["romanized"]
     if not isinstance(romanized, str):
         raise ValueError("'romanized' must be a string")
-
-    latin_regex = regex.compile(r"^[\p{Latin}0-9\s\-\']*$")  # letters, numbers, spaces, hyphen, apostrophe
-
+        
     # If romanized is present, it must be strictly Latin
     if romanized and not latin_regex.match(romanized):
         raise ValueError(f"'romanized' contains non-Latin characters: {romanized}")
@@ -48,7 +48,7 @@ def validate_dictionary_entry_json(parsed: dict) -> None:
     if not parts_of_speech:
         raise ValueError("'parts_of_speech' must contain at least one entry")
 
-    required_pos_keys = {"part_of_speech", "definition", "example", "example_translation"}
+    required_pos_keys = {"part_of_speech", "definition", "example"}
     for idx, pos in enumerate(parts_of_speech, start=0):
         if not isinstance(pos, dict):
             raise ValueError(f"parts_of_speech[{idx}] must be a dict")
@@ -99,8 +99,6 @@ def validate_translation_json(parsed: dict, snippet_text: str) -> None:
 
     if not isinstance(parsed["word_parts"], list):
         raise ValueError("'word_parts' must be a list")
-
-    latin_regex = regex.compile(r"^[\p{Latin}0-9\s\-\']*$")  # allow letters, numbers, spaces, hyphen, apostrophe
 
     for i, part in enumerate(parsed["word_parts"], start=1):
         if not isinstance(part, dict):

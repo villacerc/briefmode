@@ -1,9 +1,24 @@
 import re
 import regex
 import unicodedata
+import asyncio
+import random
+import unicodedata
 
 NO_SPACE_LANGUAGES = ["ja", "zh", "th", "lo", "km", "my", "bo", "mn"]
 GPT_MODEL = "gpt-4.1-nano"
+
+def is_latin_script(text: str) -> bool:
+    """Return True if all alphabetic characters are from the Latin script."""
+    for ch in text:
+        if ch.isalpha():
+            try:
+                if "LATIN" not in unicodedata.name(ch):
+                    return False
+            except ValueError:
+                # Character has no Unicode name
+                return False
+    return True
 
 def sanitize_word(word: str) -> str:
     # 1. Unicode normalize

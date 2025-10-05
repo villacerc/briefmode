@@ -1,7 +1,9 @@
 from models import DictionaryPOS, Snippet, Word, SnippetTranslation, Language
 from sqlalchemy.orm import Session
-from app.stores import TranslationStore, WordStore
+from .translation_store import TranslationStore
+from .word_store import WordStore
 from app.services.helpers import sanitize_phrase
+from app.services.translation_service import TranslationService
 from typing import List
 
 class DictionaryStore:
@@ -9,6 +11,7 @@ class DictionaryStore:
         self.db = db
         self.word_store = WordStore(db)
         self.translation_store = TranslationStore(db)
+        self.translation_service = TranslationService(db)
 
     def get_dictionary_pos_by_lang(self, word_id: int, target_lang_id: int) -> List[DictionaryPOS]:
         return self.db.query(DictionaryPOS).join(Snippet).join(Snippet.translations).filter(
@@ -16,7 +19,7 @@ class DictionaryStore:
             SnippetTranslation.language_id == target_lang_id
         ).all()
 
-    async def save_dictionary_entry(self, data: dict, fetch_translation_fn, source_lang: Language, target_lang: Language) -> Word:
+    async def save_dictionary_entry(self, data: dict, source_lang: Language, target_lang: Language) -> Word:
         word = self.word_store.save_word(
             word_text=data["word"],
             romanized=data["romanized"],
@@ -42,7 +45,7 @@ class DictionaryStore:
             self.db.add(part_of_speech)
 
             # Fetch and save example translation
-            translation_json = await fetch_translation_fn(pos["example"], target_lang)
+            translation_json = await self.translation_service.fetch_ai_snippet_translation(pos["example"], target_lang)
             self.translation_store.save_snippet_translation(snippet, target_lang, translation_json)
 
         self.db.commit()

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.dialects.postgresql import insert
 from models import Translation, SnippetTranslation, SnippetWord, TranscriptSnippet, Snippet, Language
 from app.services.helpers import sanitize_word
-from app.stores.word_store import WordStore
+from .word_store import WordStore
 
 class TranslationStore:
     def __init__(self, db: Session):

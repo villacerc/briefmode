@@ -4,7 +4,7 @@ import json
 from models import TranscriptSnippet, Language, Word, Translation, Video, SnippetWord
 from app.stores import TranslationStore, VideoStore
 from .helpers import retry_with_backoff, GPT_MODEL
-from app.services.json_validators import validate_translation_json
+from .json_validators import validate_translation_json
 from openai import AsyncOpenAI
 from typing import List, Dict
 import os
@@ -44,7 +44,7 @@ class TranslationService:
         parsed_json = await self.fetch_ai_snippet_translation(ts_snippet.snippet.text, translation_lang)
 
         # Save to DB
-        self.translation_store.save_snippet_translation(ts_snippet.snippet, translation_lang.id, parsed_json)
+        self.translation_store.save_snippet_translation(ts_snippet.snippet, translation_lang, parsed_json)
 
         video = self.video_store.get_video(ts_snippet.video_id)
         return self.get_normalized_translated_snippet(ts_snippet, translation_lang, video)
@@ -69,7 +69,7 @@ class TranslationService:
                     3. Break down input into individual words or tokens, including:
                        - "word": original word
                        - "part_of_speech": only include the **main POS label** (e.g., "verb"), not long explanations.
-                       - "romanized": Latin script romanization, "" if already Latin
+                       - "romanized": Latin script romanization
                        - "translations": at least three translation candidates if possible.
                     4. "romanized" must never contain non-Latin characters.
                     5. Use properly formatted JSON, double quotes, no trailing commas.
@@ -82,7 +82,7 @@ class TranslationService:
                         {{
                           "word": "<original word>",
                           "part_of_speech": "<part of speech>",
-                          "romanized": "<romanized form in Latin or ''>",
+                          "romanized": "<romanized form in Latin>",
                           "translations": "<a list of at least three translation candidates if possible>"
                         }}
                       ]

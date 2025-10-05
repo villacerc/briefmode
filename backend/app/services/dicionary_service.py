@@ -1,12 +1,12 @@
 
 from openai import AsyncOpenAI
-from app.services.json_validators import validate_interpretation_json, validate_dictionary_entry_json
-from app.services.helpers import retry_with_backoff, GPT_MODEL
-from app.services.translation_service import TranslationService
-from app.stores import LanguageStore, TranslationStore, DictionaryStore
+from .json_validators import validate_interpretation_json, validate_dictionary_entry_json
+from .helpers import retry_with_backoff, GPT_MODEL
+from app.stores import LanguageStore, TranslationStore, DictionaryStore, WordStore
 from models import Language, DictionaryPOS, Word
 import os
 import json
+import asyncio
 
 class DictionaryService:
     def __init__(self, db):
@@ -14,7 +14,6 @@ class DictionaryService:
         self.translation_store = TranslationStore(db)
         self.language_store = LanguageStore(db)
         self.dictionary_store = DictionaryStore(db)
-        self.translation_service = TranslationService(db)
         self.async_openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     async def get_dictionary_entry(self, text: str, target_lang: Language):
@@ -35,12 +34,21 @@ class DictionaryService:
 
                 word = await self.dictionary_store.save_dictionary_entry(
                     dictionary_entry,
-                    self.translation_service.fetch_ai_snippet_translation,
                     source_lang,
                     target_lang
                 )
 
-                return self.get_normalized_dictionary_entry(word, target_lang)
+                data = self.get_normalized_dictionary_entry(word, target_lang)
+                return {
+                    "is_interpretable": True,
+                    "is_word": interpretation["is_word"],
+                    "data": data
+                }
+            else:
+                return {
+                    "is_interpretable": False,
+                    "data": None
+                }
 
         except Exception as e:
             raise RuntimeError(f"Error getting dictionary entry for '{text}'. {e}")
@@ -120,7 +128,7 @@ class DictionaryService:
                     Given a word, a source language, and a target language, produce a JSON response according to the rules below.
 
                     Rules
-                    1. Romanization output: Only provide a romanized form if the input word is not in the Latin script. If the input is already in Latin script (whether native or romanized), leave "romanized": "".
+                    1. Romanization output: romanized form of the input word in the Latin script.
                     2. Translations: Provide up to 4 plausible translations into the target language.
                     3. Parts of speech: Provide up to 4 unique parts of speech if available. Each must include:
                         • Part of speech (in English)
@@ -128,7 +136,7 @@ class DictionaryService:
                         • Example sentence in the source language’s native script
                     {{
                     "word": "<original input word>",
-                    "romanized": "<romanized form of input word if not Latin script, otherwise empty string",
+                    "romanized": "<romanized form of input word>",
                     "translations": "<a list of at least three translation candidates if possible>",
                     "parts_of_speech": [
                             {{
