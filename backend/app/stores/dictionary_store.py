@@ -2,7 +2,7 @@ from models import DictionaryPOS, Snippet, Word, SnippetTranslation, Language
 from sqlalchemy.orm import Session
 from .translation_store import TranslationStore
 from .word_store import WordStore
-from app.services.helpers import sanitize_phrase
+from app.utils.helpers import sanitize_phrase
 from app.services.translation_service import TranslationService
 from typing import List
 

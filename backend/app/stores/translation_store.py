@@ -3,7 +3,7 @@ from typing import List
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.postgresql import insert
 from models import Translation, SnippetTranslation, SnippetWord, TranscriptSnippet, Snippet, Language
-from app.services.helpers import sanitize_word
+from app.utils.helpers import sanitize_word
 from .word_store import WordStore
 
 class TranslationStore:

@@ -1,6 +1,6 @@
 
-from .json_validators import validate_interpretation_json, validate_dictionary_entry_json
-from .helpers import fetch_ai_data
+from app.utils.json_validators import validate_interpretation_json, validate_dictionary_entry_json
+from app.utils.helpers import fetch_ai_data
 from app.stores import LanguageStore, TranslationStore, DictionaryStore, WordStore
 from models import Language, DictionaryPOS, Word
 
@@ -142,3 +142,5 @@ class DictionaryService:
             return parsed_json
         except Exception as e:
             raise RuntimeError(f"Error fetching AI dictionary entry for '{input}'. {e}")
+
+    

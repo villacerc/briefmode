@@ -1,8 +1,8 @@
 # app/services/translation_service.py
 from models import TranscriptSnippet, Language, Word, Translation, Video, SnippetWord
 from app.stores import TranslationStore, VideoStore
-from .json_validators import validate_translation_json
-from .helpers import fetch_ai_data
+from app.utils.json_validators import validate_translation_json
+from app.utils.helpers import fetch_ai_data
 from typing import List, Dict
 
 class TranslationService:

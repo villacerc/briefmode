@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.postgresql import insert
 from models import Word, Translation
-from app.services.helpers import sanitize_word, is_latin_script
+from app.utils.helpers import sanitize_word, is_latin_script
 
 class WordStore:
     def __init__(self, db: Session):

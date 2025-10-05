@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 from models import Video, TranscriptSnippet, Snippet, SnippetWord, Word, Language
-from app.services.helpers import sanitize_phrase
+from app.utils.helpers import sanitize_phrase
 
 class VideoStore:
     def __init__(self, db):
