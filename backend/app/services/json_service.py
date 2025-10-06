@@ -5,6 +5,35 @@ class JSONService():
     def __init__(self):
         self.latin_regex = regex.compile(r"^[\p{Latin}0-9\s\-\']*$")  # allow letters, numbers, spaces, hyphen, apostrophe
 
+    def validate_dictionary_pos_json(self, data: dict) -> None:
+        """
+        Validates the structure and content of the data part-of-speech entry JSON.
+        Raises ValueError if something is invalid.
+        """
+        required_keys = {"parts_of_speech"}
+        if not required_keys.issubset(data.keys()):
+            raise ValueError(f"Missing required keys: parts_of_speech")
+
+        parts_of_speech = data["parts_of_speech"]
+        if not isinstance(parts_of_speech, list):
+            raise ValueError("'parts_of_speech' must be a list")
+
+        if not parts_of_speech:
+            raise ValueError("'parts_of_speech' must contain at least one entry")
+
+        required_pos_keys = {"part_of_speech", "definition", "example"}
+        for idx, pos in enumerate(parts_of_speech, start=0):
+            if not isinstance(pos, dict):
+                raise ValueError(f"parts_of_speech[{idx}] must be a dict")
+
+            missing = required_pos_keys - pos.keys()
+            if missing:
+                raise ValueError(f"parts_of_speech[{idx}] missing keys: {missing}")
+
+            for key in required_pos_keys:
+                if not isinstance(pos[key], str):
+                    raise ValueError(f"parts_of_speech[{idx}]['{key}'] must be a string")
+
     def validate_dictionary_entry_json(self, data: dict) -> None:
         """
         Validates the structure and content of the data dictionary entry JSON.
@@ -43,25 +72,7 @@ class JSONService():
                 raise ValueError(f"translations[{i}] must be a string")
 
         # Validate "parts_of_speech"
-        parts_of_speech = data["parts_of_speech"]
-        if not isinstance(parts_of_speech, list):
-            raise ValueError("'parts_of_speech' must be a list")
-
-        if not parts_of_speech:
-            raise ValueError("'parts_of_speech' must contain at least one entry")
-
-        required_pos_keys = {"part_of_speech", "definition", "example"}
-        for idx, pos in enumerate(parts_of_speech, start=0):
-            if not isinstance(pos, dict):
-                raise ValueError(f"parts_of_speech[{idx}] must be a dict")
-
-            missing = required_pos_keys - pos.keys()
-            if missing:
-                raise ValueError(f"parts_of_speech[{idx}] missing keys: {missing}")
-
-            for key in required_pos_keys:
-                if not isinstance(pos[key], str):
-                    raise ValueError(f"parts_of_speech[{idx}]['{key}'] must be a string")
+        self.validate_pos_entry_json(data)
 
     def validate_interpretation_json(self, data: dict) -> None:
         """

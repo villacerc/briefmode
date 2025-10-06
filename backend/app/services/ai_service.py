@@ -134,7 +134,7 @@ class AIService:
                     Source language: {source_lang.name}
                     Target language: {target_lang.name}
                     """
-            parsed_json = await self.fetch_ai_data(prompt, self.json_service.validate_dictionary_entry_json)
+            parsed_json = await self.fetch_ai_data(prompt, self.json_service.validate_dictionary_pos_json)
             return parsed_json
         except Exception as e:
             raise RuntimeError(f"Error fetching AI dictionary pos for '{input}'. {e}")

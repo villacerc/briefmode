@@ -28,7 +28,14 @@ class DictionaryStore:
             target_lang_id=target_lang.id,
         )
 
-        for pos in data["parts_of_speech"]:
+        await self.save_word_pos_entry(word, data, source_lang, target_lang)
+
+        return word
+    
+    async def save_word_pos_entry(self, word: Word, data: dict, source_lang: Language, target_lang: Language) -> Word:
+        pos_data = data["parts_of_speech"]
+
+        for pos in pos_data:
             snippet = Snippet(
                 text=sanitize_phrase(pos["example"]),
                 language_id=source_lang.id,

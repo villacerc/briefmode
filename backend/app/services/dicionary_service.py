@@ -32,11 +32,24 @@ class DictionaryService:
                         }
                     else:
                         # fetch POS from AI and save
-                        dictionary_entry = await self.ai_service.fetch_ai_dictionary_pos(
+                        dictionary_pos = await self.ai_service.fetch_ai_dictionary_pos(
                             interpretation["normalized_text"],
                             source_lang,
                             target_lang
                         )
+                        word = await self.dictionary_store.save_word_pos_entry(
+                            word,
+                            dictionary_pos,
+                            source_lang,
+                            target_lang
+                        )
+                        data = self.get_normalized_dictionary_entry(word, target_lang)
+                        return {
+                            "is_interpretable": True,
+                            "is_word": interpretation["is_word"],
+                            "data": data
+                        }
+
                 # TEMPORARY: assumes text is a word, not a phrase
                 source_lang = self.language_store.get_by_code(interpretation["language_code"])
 
