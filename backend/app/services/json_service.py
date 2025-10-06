@@ -72,7 +72,7 @@ class JSONService():
                 raise ValueError(f"translations[{i}] must be a string")
 
         # Validate "parts_of_speech"
-        self.validate_pos_entry_json(data)
+        self.validate_dictionary_pos_json(data)
 
     def validate_interpretation_json(self, data: dict) -> None:
         """

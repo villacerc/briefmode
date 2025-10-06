@@ -47,15 +47,15 @@ async def root():
         "version": "1.0.0"
     }
 
-@app.get("/api/dictionary/{input}", summary="Get Input Definition")
-async def get_input_definition(input: str, lang: str):
+@app.get("/api/dictionary/{text}", summary="Get Input Definition")
+async def get_input_definition(text: str, lang: str):
     db = next(get_db())
     try:
         target_lang = LanguageStore(db).get_by_code(lang)
-        dictionary_entry = await DictionaryService(db).get_dictionary_entry(input, target_lang)
+        dictionary_entry = await DictionaryService(db).get_dictionary_entry(text, target_lang)
         return dictionary_entry
     except Exception as e:
-        message = f"Error occurred while attempting to fetch input definition for '{input}'. {e}"
+        message = f"Error occurred while attempting to fetch input definition for '{text}'. {e}"
         logger.error(message)
         raise HTTPException(
             status_code=500,
