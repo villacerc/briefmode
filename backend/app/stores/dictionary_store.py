@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from .translation_store import TranslationStore
 from .word_store import WordStore
 from app.utils.helpers import sanitize_phrase
-from app.services.translation_service import TranslationService
+from app.services.ai_service import AIService
 from typing import List
 
 class DictionaryStore:
@@ -11,7 +11,7 @@ class DictionaryStore:
         self.db = db
         self.word_store = WordStore(db)
         self.translation_store = TranslationStore(db)
-        self.translation_service = TranslationService(db)
+        self.ai_service = AIService()
 
     def get_word_dictionary_pos_by_lang(self, word_id: int, target_lang_id: int) -> List[DictionaryPOS]:
         return self.db.query(DictionaryPOS).join(Snippet).join(Snippet.translations).filter(
@@ -45,7 +45,7 @@ class DictionaryStore:
             self.db.add(part_of_speech)
 
             # Fetch and save example translation
-            translation_json = await self.translation_service.fetch_ai_snippet_translation(pos["example"], target_lang)
+            translation_json = await self.ai_service.fetch_ai_snippet_translation(pos["example"], target_lang)
             self.translation_store.save_snippet_translation(snippet, target_lang, translation_json)
 
         self.db.commit()

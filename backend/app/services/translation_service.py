@@ -1,9 +1,9 @@
 # app/services/translation_service.py
 from models import TranscriptSnippet, Language, Word, Translation, Video, SnippetWord
 from app.stores import TranslationStore, VideoStore
-from app.utils.json_validators import validate_translation_json
-from app.utils.helpers import fetch_ai_data
+from .ai_service import AIService
 from typing import List, Dict
+import asyncio
 
 class TranslationService:
     SEMAPHORE_CONCURRENCY = 10
@@ -12,6 +12,7 @@ class TranslationService:
         self.db = db
         self.translation_store = TranslationStore(db)
         self.video_store = VideoStore(db)
+        self.ai_service = AIService()
 
     async def get_translations(self, ts_snippets: List[TranscriptSnippet], translation_lang: Language) -> List[Dict]:
         # Create a semaphore to limit concurrency to avoid overloading API and database
@@ -36,7 +37,7 @@ class TranslationService:
             return self.get_normalized_translated_snippet(ts_snippet, translation_lang, video)
 
         # Call AI, parse JSON, etc.
-        parsed_json = await self.fetch_ai_snippet_translation(ts_snippet.snippet.text, translation_lang)
+        parsed_json = await self.ai_service.fetch_ai_snippet_translation(ts_snippet.snippet.text, translation_lang)
 
         # Save to DB
         self.translation_store.save_snippet_translation(ts_snippet.snippet, translation_lang, parsed_json)
@@ -47,44 +48,6 @@ class TranslationService:
     def ts_snippet_has_translation_for_language(self, snippet_id: int, lang_id: int) -> bool:
         translation = self.translation_store.get_snippet_translation_by_language(snippet_id, lang_id)
         return translation is not None
-
-    async def fetch_ai_snippet_translation(self, snippet_text, translation_lang):
-        try:
-            prompt = f"""
-                   Translate the input below to {translation_lang.name}.
-                    Rules:
-                    1. Respond ONLY with valid JSON. Do NOT include explanations, comments, or extra text.
-                    2. Capitalize the first word only if required by grammar.
-                    3. Break down input into individual words or tokens, including:
-                       - "word": original word
-                       - "part_of_speech": only include the **main POS label** (e.g., "verb"), not long explanations.
-                       - "romanized": Latin script romanization
-                       - "translations": at least three translation candidates if possible.
-                    4. "romanized" must never contain non-Latin characters.
-                    5. Use properly formatted JSON, double quotes, no trailing commas.
-
-                    Output JSON format:
-
-                    {{
-                      "snippet_text": "<original input text>",
-                      "translation": "<full translated sentence here>",
-                      "word_parts": [
-                        {{
-                          "word": "<original word>",
-                          "part_of_speech": "<part of speech>",
-                          "romanized": "<romanized form in Latin>",
-                          "translations": "<a list of at least three translation candidates if possible>"
-                        }}
-                      ]
-                    }}
-
-                    Input:
-                    {snippet_text}
-                    """
-            parsed_json = await fetch_ai_data(prompt, validate_translation_json)
-            return parsed_json
-        except Exception as e:
-            raise RuntimeError(f"Error fetching AI snippet translation for '{snippet_text}'. {e}")
 
     def get_normalized_translated_snippet(self, ts_snippet: TranscriptSnippet, translation_lang: Language, video: Video) -> Dict:
         try:
