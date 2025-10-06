@@ -108,7 +108,7 @@ async def stream_translations(source_id: str, lang: str):
         for i in range(0, len(transcript_snippets), chunk_size):
             transcript_chunk = transcript_snippets[i:i+chunk_size]
             try:
-                translated_chunk = await TranslationService(db).get_translations(transcript_chunk, translation_lang)
+                translated_chunk = await TranslationService(db).get_ts_translations(transcript_chunk, translation_lang)
                 yield json.dumps({"message": "Chunk translated", "data": translated_chunk}, ensure_ascii=False) + "\n"
             except Exception as e:
                 yield json.dumps({"message": "Failed to translate chunk", "chunk_index": i, "error": str(e)}, ensure_ascii=False) + "\n"

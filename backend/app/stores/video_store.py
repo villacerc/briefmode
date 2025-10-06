@@ -2,10 +2,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 from models import Video, TranscriptSnippet, Snippet, SnippetWord, Word, Language
 from app.utils.helpers import sanitize_phrase
+from app.stores.snippet_store import SnippetStore
 
 class VideoStore:
     def __init__(self, db):
         self.db = db
+        self.snippet_store = SnippetStore(db)
 
     def get_video(self, video_id: int):
         return self.db.query(Video).filter(Video.id == video_id).first()
@@ -35,10 +37,7 @@ class VideoStore:
 
         transcript_snippets = []
         for i, item in enumerate(transcript_data.snippets):
-            sanitized_phrase = sanitize_phrase(item.text, language.code)
-            snippet = Snippet(language=language, text=sanitized_phrase)
-            self.db.add(snippet)
-            self.db.flush()
+            snippet = self.snippet_store.save_snippet(item.text, language.id)
             
             ts_snippet = TranscriptSnippet(
                 video_id=video.id,

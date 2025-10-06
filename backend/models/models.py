@@ -1,6 +1,12 @@
-from sqlalchemy import UniqueConstraint, Index, Column, Integer, String, Float, Text, ForeignKey, DateTime, func
+from sqlalchemy import CheckConstraint, UniqueConstraint, Index, Column, Integer, String, Float, Text, ForeignKey, DateTime, func
 from sqlalchemy.orm import relationship
 from database import Base
+import enum
+
+
+class SnippetType(enum.Enum):
+    TRANSCRIPT = "transcript"
+    POS_EXAMPLE = "pos_example"
 
 class Video(Base):
     __tablename__ = "videos"
@@ -23,7 +29,7 @@ class TranscriptSnippet(Base):
 
     id = Column(Integer, primary_key=True)
     video_id = Column(Integer, ForeignKey("videos.id", ondelete="CASCADE"), nullable=False)
-    snippet_id = Column(Integer, ForeignKey("snippets.id", ondelete="CASCADE"), nullable=False, unique=True)
+    snippet_id = Column(Integer, ForeignKey("snippets.id", ondelete="CASCADE"), nullable=False)
     text = Column(Text, nullable=False)
     start = Column(Float, nullable=False)
     end = Column(Float, nullable=False)
@@ -32,7 +38,8 @@ class TranscriptSnippet(Base):
     created_at = Column(DateTime, server_default=func.now())
 
     video = relationship("Video", back_populates="transcript_snippets")
-    snippet = relationship("Snippet", back_populates="transcript_snippet")
+    snippet = relationship("Snippet", back_populates="transcript_snippets")
+    snippet_words = relationship("SnippetWord", back_populates="transcript_snippet", cascade="all, delete-orphan", order_by="SnippetWord.order_index")
 
     __table_args__ = (
         Index("ix_snippet_videoId_start", "video_id", "start", unique=True),
@@ -50,12 +57,7 @@ class Snippet(Base):
     language = relationship("Language", back_populates="snippets")
     snippet_words = relationship("SnippetWord", back_populates="snippet", cascade="all, delete-orphan")
     translations = relationship("SnippetTranslation", back_populates="snippet", cascade="all, delete-orphan")
-    transcript_snippet = relationship(
-        "TranscriptSnippet",
-        back_populates="snippet",
-        uselist=False, # one-to-one relationship
-        cascade="all, delete-orphan",
-    )
+    transcript_snippets = relationship("TranscriptSnippet", back_populates="snippet", cascade="all, delete-orphan")
     pos_example = relationship("DictionaryPOS", back_populates="normalized_example", uselist=False)
 
     __table_args__ = (
@@ -102,7 +104,11 @@ class SnippetWord(Base):
     __tablename__ = "snippet_words"
 
     id = Column(Integer, primary_key=True)
-    snippet_id = Column(Integer, ForeignKey("snippets.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # Optional relationships
+    snippet_id = Column(Integer, ForeignKey("snippets.id", ondelete="CASCADE"), nullable=True)
+    transcript_snippet_id = Column(Integer, ForeignKey("transcript_snippets.id", ondelete="CASCADE"), nullable=True)
+
     word_id = Column(Integer, ForeignKey("words.id", ondelete="SET NULL"))
     part_of_speech_tag = Column(String(50))
     text = Column(String(255), nullable=False)
@@ -110,8 +116,19 @@ class SnippetWord(Base):
 
     created_at = Column(DateTime, server_default=func.now())
 
+    transcript_snippet = relationship("TranscriptSnippet", back_populates="snippet_words")
     snippet = relationship("Snippet", back_populates="snippet_words")
     word = relationship("Word", back_populates="snippet_words")
+
+    __table_args__ = (
+        CheckConstraint(
+            """
+            (snippet_id IS NOT NULL AND transcript_snippet_id IS NULL)
+            OR (snippet_id IS NULL AND transcript_snippet_id IS NOT NULL)
+            """,
+            name="check_one_fk_not_null"
+        ),
+    )
 
 class Word(Base):
     __tablename__ = "words"

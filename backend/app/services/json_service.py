@@ -1,10 +1,8 @@
 import re
 import regex
+from app.utils.helpers import is_latin_script
 
-class JSONService():
-    def __init__(self):
-        self.latin_regex = regex.compile(r"^[\p{Latin}0-9\s\-\']*$")  # allow letters, numbers, spaces, hyphen, apostrophe
-
+class JSONService():  
     def validate_dictionary_pos_json(self, data: dict) -> None:
         """
         Validates the structure and content of the data part-of-speech entry JSON.
@@ -56,7 +54,7 @@ class JSONService():
             raise ValueError("'romanized' must be a string")
             
         # If romanized is present, it must be strictly Latin
-        if romanized and not self.latin_regex.match(romanized):
+        if romanized and not is_latin_script(romanized):
             raise ValueError(f"'romanized' contains non-Latin characters: {romanized}")
 
         # Validate "translations"
@@ -136,7 +134,7 @@ class JSONService():
                 raise ValueError(f"word_parts[{i}]['romanized'] must be a string")
 
             # Check romanized: must be empty or strictly Latin script
-            if romanized and not self.latin_regex.match(romanized):
+            if romanized and not is_latin_script(romanized):
                 raise ValueError(
                     f"word_parts[{i}]['romanized'] contains non-Latin characters: {romanized}"
                 )

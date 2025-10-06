@@ -73,7 +73,7 @@ class AIService:
         except Exception as e:
             raise RuntimeError(f"Error fetching AI text interpretation for '{text}'. {e}")
 
-    async def fetch_ai_dictionary_entry(self, input: str, source_lang: Language, target_lang: Language):
+    async def fetch_ai_dictionary_entry(self, text: str, source_lang: Language, target_lang: Language):
             try:
                 prompt = f"""
                         You are a dictionary assistant. 
@@ -99,7 +99,7 @@ class AIService:
                             ]
                         }}
 
-                        Input word: {input}
+                        Input word: {text}
                         Source language: {source_lang.name}
                         Target language: {target_lang.name}
                         """
@@ -108,7 +108,7 @@ class AIService:
             except Exception as e:
                 raise RuntimeError(f"Error fetching AI dictionary entry for '{input}'. {e}")
 
-    async def fetch_ai_dictionary_pos(self, input: str, source_lang: Language, target_lang: Language):
+    async def fetch_ai_dictionary_pos(self, text: str, source_lang: Language, target_lang: Language):
         try:
             prompt = f"""
                     You are a dictionary assistant. 
@@ -130,7 +130,7 @@ class AIService:
                         ]
                     }}
 
-                    Input word: {input}
+                    Input word: {text}
                     Source language: {source_lang.name}
                     Target language: {target_lang.name}
                     """
@@ -139,15 +139,15 @@ class AIService:
         except Exception as e:
             raise RuntimeError(f"Error fetching AI dictionary pos for '{input}'. {e}")
 
-    async def fetch_ai_snippet_translation(self, snippet_text, translation_lang):
+    async def fetch_ai_snippet_translation(self, snippet_text: str, translation_lang: Language):
         try:
             prompt = f"""
-                   Translate the input below to {translation_lang.name}.
+                    Translate the input below to {translation_lang.name}.
                     Rules:
                     1. Respond ONLY with valid JSON. Do NOT include explanations, comments, or extra text.
                     2. Capitalize the first word only if required by grammar.
-                    3. Break down input into individual words or tokens, including:
-                       - "word": original word
+                    3. Break down input into individual word tokens, including:
+                       - "word": original word with punctuation intact. 
                        - "part_of_speech": only include the **main POS label** (e.g., "verb"), not long explanations.
                        - "romanized": Latin script romanization
                        - "translations": at least three translation candidates if possible.
@@ -161,7 +161,7 @@ class AIService:
                       "translation": "<full translated sentence here>",
                       "word_parts": [
                         {{
-                          "word": "<original word>",
+                          "word": "<original word with punctuation intact>",
                           "part_of_speech": "<part of speech>",
                           "romanized": "<romanized form in Latin>",
                           "translations": "<a list of at least three translation candidates if possible>"

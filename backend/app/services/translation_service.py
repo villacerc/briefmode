@@ -1,5 +1,5 @@
 # app/services/translation_service.py
-from models import TranscriptSnippet, Language, Word, Translation, Video, SnippetWord
+from models import TranscriptSnippet, Language, Word, Translation, Video
 from app.stores import TranslationStore, VideoStore
 from .ai_service import AIService
 from typing import List, Dict
@@ -14,13 +14,13 @@ class TranslationService:
         self.video_store = VideoStore(db)
         self.ai_service = AIService()
 
-    async def get_translations(self, ts_snippets: List[TranscriptSnippet], translation_lang: Language) -> List[Dict]:
+    async def get_ts_translations(self, ts_snippets: List[TranscriptSnippet], translation_lang: Language) -> List[Dict]:
         # Create a semaphore to limit concurrency to avoid overloading API and database
         semaphore = asyncio.Semaphore(self.SEMAPHORE_CONCURRENCY)
 
         async def worker(ts_snippet: TranscriptSnippet, translation_lang: Language):
             async with semaphore:
-                translated_snippet = await self.get_translated_snippet(ts_snippet, translation_lang)
+                translated_snippet = await self.get_ts_translated_snippet(ts_snippet, translation_lang)
                 return translated_snippet
 
         try:
@@ -31,27 +31,27 @@ class TranslationService:
         except Exception as e:
             raise RuntimeError(f"Error occurred while translating snippets. {e}")
 
-    async def get_translated_snippet(self, ts_snippet: TranscriptSnippet, translation_lang: Language):
+    async def get_ts_translated_snippet(self, ts_snippet: TranscriptSnippet, translation_lang: Language):
         if self.ts_snippet_has_translation_for_language(ts_snippet.snippet_id, translation_lang.id):
             video = self.video_store.get_video(ts_snippet.video_id)
-            return self.get_normalized_translated_snippet(ts_snippet, translation_lang, video)
+            return self.get_normalized_ts_translated_snippet(ts_snippet, translation_lang, video)
 
         # Call AI, parse JSON, etc.
         parsed_json = await self.ai_service.fetch_ai_snippet_translation(ts_snippet.snippet.text, translation_lang)
 
         # Save to DB
-        self.translation_store.save_snippet_translation(ts_snippet.snippet, translation_lang, parsed_json)
+        self.translation_store.save_ai_ts_snippet_translation(ts_snippet, translation_lang, parsed_json)
 
         video = self.video_store.get_video(ts_snippet.video_id)
-        return self.get_normalized_translated_snippet(ts_snippet, translation_lang, video)
+        return self.get_normalized_ts_translated_snippet(ts_snippet, translation_lang, video)
 
     def ts_snippet_has_translation_for_language(self, snippet_id: int, lang_id: int) -> bool:
         translation = self.translation_store.get_snippet_translation_by_language(snippet_id, lang_id)
         return translation is not None
 
-    def get_normalized_translated_snippet(self, ts_snippet: TranscriptSnippet, translation_lang: Language, video: Video) -> Dict:
+    def get_normalized_ts_translated_snippet(self, ts_snippet: TranscriptSnippet, translation_lang: Language, video: Video) -> Dict:
         try:
-            snippet_words = ts_snippet.snippet.snippet_words
+            snippet_words = ts_snippet.snippet_words
 
             snippet_translation = self.translation_store.get_snippet_translation_by_language(ts_snippet.snippet_id, translation_lang.id)
 
