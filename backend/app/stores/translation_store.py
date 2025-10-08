@@ -23,7 +23,7 @@ class TranslationStore:
             SnippetTranslation.language_id == lang_id
         ).first()
 
-    def save_snippet_translation(self, text: str, snippet: Snippet, translation_lang: Language):
+    def save_snippet_translation(self, text: str, snippet: Snippet, translation_lang: Language) -> SnippetTranslation:
         snippet_translation = SnippetTranslation(
             text=text,
             snippet_id=snippet.id,
@@ -32,14 +32,15 @@ class TranslationStore:
         self.db.add(snippet_translation)
         self.db.commit()
         self.db.refresh(snippet_translation)
+        return snippet_translation
 
-    def save_ai_snippet_translation(self, snippet: Snippet, translation_lang: Language, data: dict):
+    def save_ai_snippet_translation(self, snippet: Snippet, translation_lang: Language, data: dict) -> SnippetTranslation:
         snippet_translation = self.save_snippet_translation(data["translation"], snippet, translation_lang)
         self.word_store.save_snippet_words(data["word_parts"], SnippetType.POS_EXAMPLE, snippet.id, snippet.language_id, translation_lang.id)
 
         return snippet_translation
 
-    def save_ai_ts_snippet_translation(self, ts_snippet: TranscriptSnippet, translation_lang: Language, data: dict):
+    def save_ai_ts_snippet_translation(self, ts_snippet: TranscriptSnippet, translation_lang: Language, data: dict) -> SnippetTranslation:
         snippet_translation = self.save_snippet_translation(data["translation"], ts_snippet.snippet, translation_lang)
         self.word_store.save_snippet_words(data["word_parts"], SnippetType.TRANSCRIPT, ts_snippet.id, ts_snippet.snippet.language_id, translation_lang.id)
 
