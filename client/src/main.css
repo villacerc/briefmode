@@ -1,13 +1,14 @@
 @import "tailwindcss";
 @plugin "daisyui";
+
 @plugin "daisyui/theme" {
   name: "unfriendlydonut";
   default: true;
   prefersdark: false;
   color-scheme: "light";
-  --color-base-100: oklch(97% 0.013 17.38);
-  --color-base-200: oklch(93% 0.032 17.717);
-  --color-base-300: oklch(88% 0.062 18.334);
+  --color-base-100: oklch(93% 0.032 17.717);
+  --color-base-200: oklch(88% 0.062 18.334);
+  --color-base-300: oklch(80% 0.114 19.571);
   --color-base-content: oklch(39% 0.141 25.723);
   --color-primary: oklch(70% 0.191 22.216);
   --color-primary-content: oklch(25% 0.092 26.042);
@@ -36,7 +37,7 @@
 }
 
 :root {
-  --sidebar-width: 350px;
+  --sidebar-width: 600px;
   --space-above-player: 7.8125rem;
   --space-below-player: 6rem;
   --max-player-height: calc(100vh - var(--space-above-player) - var(--space-below-player));

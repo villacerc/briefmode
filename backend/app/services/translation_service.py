@@ -46,14 +46,14 @@ class TranslationService:
         return self.get_normalized_ts_translated_snippet(ts_snippet, translation_lang, video)
 
     def ts_snippet_has_translation_for_language(self, snippet_id: int, lang_id: int) -> bool:
-        translation = self.translation_store.get_snippet_translation_by_language(snippet_id, lang_id)
+        translation = self.translation_store.get_snippet_translation_by_lang(snippet_id, lang_id)
         return translation is not None
 
     def get_normalized_ts_translated_snippet(self, ts_snippet: TranscriptSnippet, translation_lang: Language, video: Video) -> Dict:
         try:
             snippet_words = ts_snippet.snippet_words
 
-            snippet_translation = self.translation_store.get_snippet_translation_by_language(ts_snippet.snippet_id, translation_lang.id)
+            snippet_translation = self.translation_store.get_snippet_translation_by_lang(ts_snippet.snippet_id, translation_lang.id)
 
             normalized_snippet_words = [{
                 "text": w.text,

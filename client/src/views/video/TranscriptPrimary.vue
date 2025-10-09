@@ -1,6 +1,6 @@
 <template>
   <div
-    class="text-center relative group text-xl mt-2 px-5 py-2 bg-base-200 border border-base-300 rounded-xl"
+    class="text-center relative group text-2xl mt-2 px-5 py-2 bg-base-200 border border-base-300 rounded-xl"
   >
     <span
       v-for="(line, i) in visibleLines"
@@ -9,7 +9,7 @@
       :class="[
         line.snippet_id === snippets[activeIndex].snippet_id &&
         !isAnnotation(line.text)
-          ? 'bg-neutral text-neutral-content'
+          ? 'bg-base-100'
           : '',
         languageUsesSpaces(line.translation_language) ? 'mr-1' : '',
       ]"
@@ -54,7 +54,7 @@
     </span>
   </div>
   <div
-    class="text-center relative group text-xl mt-2 px-5 py-2 border border-base-300 rounded-xl"
+    class="text-center relative group text-2xl mt-2 px-5 py-2 border border-base-300 rounded-xl"
   >
     <span
       v-for="(line, i) in visibleLines"
@@ -63,7 +63,7 @@
       :class="[
         line.snippet_id === snippets[activeIndex].snippet_id &&
         !isAnnotation(line.text)
-          ? 'bg-neutral text-neutral-content'
+          ? 'bg-base-200'
           : '',
         languageUsesSpaces(line.translation_language) ? 'mr-1' : '',
       ]"
@@ -78,13 +78,12 @@ import { computed } from "vue";
 import type { TranslatedSnippet } from "../../types";
 
 const VISIBLE_LINES_SIZE = 3;
-const NO_SPACE_LANGUAGES = ["ja", "zh", "th", "lo", "km", "my", "bo", "mn"];
-
-const languageUsesSpaces = (langCode: string) => {
-  return !NO_SPACE_LANGUAGES.includes(langCode);
-};
 
 const props = defineProps({
+  languageUsesSpaces: {
+    type: Function,
+    required: true,
+  },
   activeIndex: {
     type: Number,
     required: true,

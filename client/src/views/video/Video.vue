@@ -1,8 +1,5 @@
 <template>
   <div class="my-10 mx-15">
-    <h1 class="text-xl font-medium mb-5 text-accent-content text-center">
-      How I Went From Broke To Millionaire in 24 Months
-    </h1>
     <div class="youtube-layout">
       <div class="youtube-primary">
         <div
@@ -23,19 +20,19 @@
           :isAnnotation="isAnnotation"
           :removeAnnotations="removeAnnotations"
           :snippets="snippets"
+          :languageUsesSpaces="languageUsesSpaces"
         />
       </div>
 
       <div class="youtube-sidebar border border-base-300 rounded-xl">
-        <div class="h-[500px]">
-          <div class="flex p-2 space-x-2">
-            <button class="btn btn-neutral btn-sm rounded-lg">
-              Transcript
-            </button>
-            <button class="btn btn-sm">Translation</button>
-          </div>
-          <!-- Content for selected tab -->
-          Content goes here
+        <div class="h-[500px] flex">
+          <TranscriptSecondary
+            :activeIndex="activeIndex"
+            :snippets="snippets"
+            :languageUsesSpaces="languageUsesSpaces"
+            :isAnnotation="isAnnotation"
+            :removeAnnotations="removeAnnotations"
+          />
         </div>
       </div>
     </div>
@@ -48,6 +45,7 @@ import { ref, reactive, onMounted, onUnmounted } from "vue";
 import type { TranslatedSnippet } from "../../types";
 import YouTube from "vue3-youtube";
 import TranscriptPrimary from "./TranscriptPrimary.vue";
+import TranscriptSecondary from "./TranscriptSecondary.vue";
 
 const route = useRoute();
 // A ref in Vue 3 is reactive (good for primitives). Whenever its .value changes,
@@ -55,6 +53,11 @@ const route = useRoute();
 const player = ref<any>(null);
 const activeIndex = ref<number>(-1);
 const snippets = reactive<TranslatedSnippet[]>([]);
+
+const NO_SPACE_LANGUAGES = ["ja", "zh", "th", "lo", "km", "my", "bo", "mn"];
+const languageUsesSpaces = (langCode: string) => {
+  return !NO_SPACE_LANGUAGES.includes(langCode);
+};
 
 const youtube = YouTube;
 let animationFrame: number;
