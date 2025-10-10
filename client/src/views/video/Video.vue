@@ -24,7 +24,10 @@
         />
       </div>
 
-      <div class="youtube-sidebar border border-base-300 rounded-xl">
+      <div
+        v-if="uiStore.transcriptSidebarOpen"
+        class="youtube-sidebar border border-base-300 rounded-xl"
+      >
         <div class="h-[500px] flex">
           <TranscriptSecondary
             :activeIndex="activeIndex"
@@ -46,6 +49,7 @@ import type { TranslatedSnippet } from "../../types";
 import YouTube from "vue3-youtube";
 import TranscriptPrimary from "./TranscriptPrimary.vue";
 import TranscriptSecondary from "./TranscriptSecondary.vue";
+import { useUiStore } from "../../stores/uiStore.js";
 
 const route = useRoute();
 // A ref in Vue 3 is reactive (good for primitives). Whenever its .value changes,
@@ -53,7 +57,7 @@ const route = useRoute();
 const player = ref<any>(null);
 const activeIndex = ref<number>(-1);
 const snippets = reactive<TranslatedSnippet[]>([]);
-
+const uiStore = useUiStore();
 const NO_SPACE_LANGUAGES = ["ja", "zh", "th", "lo", "km", "my", "bo", "mn"];
 const languageUsesSpaces = (langCode: string) => {
   return !NO_SPACE_LANGUAGES.includes(langCode);
