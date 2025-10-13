@@ -16,13 +16,13 @@
           <span
             v-for="(part, j) in snippet.snippet_words"
             :key="j"
-            class="relative cursor-pointer inline-block group/word hover:bg-secondary hover:text-base-content rounded-sm"
+            class="text-sm relative cursor-pointer inline-block group/word hover:bg-secondary hover:text-base-content rounded-sm"
             @mouseenter="checkPopupPosition(j, $event)"
           >
-            <p class="text-sm">
+            <p>
               {{ removeAnnotations(part.romanized) }}
             </p>
-            <p class="">
+            <p>
               {{ part.text }}
             </p>
             <!-- Hover popup -->
@@ -56,7 +56,7 @@
         </div>
       </div>
       <div class="p-2">
-        <p class="text-lg">{{ snippet.translation }}</p>
+        <p class="text-sm">{{ snippet.translation }}</p>
       </div>
     </div>
   </div>
