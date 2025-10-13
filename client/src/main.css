@@ -44,14 +44,13 @@
   --max-player-width: 800px;
 }
 
-.youtube-layout {
+.video-layout {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 1rem;
 }
 
-.youtube-primary {
+.video-primary {
   flex: 1;
   max-width: var(--max-player-width);
 }
@@ -62,13 +61,17 @@
   max-height: var(--max-player-height);
 }
 
+.dictionary-container {
+  width: 300px;
+}
+
 /* Mobile responsive */
 @media (min-width: 1015px) {
-  .youtube-layout {
+  .video-layout {
     flex-direction: row;
   }
 
-  .youtube-sidebar {
+  .transcript-container {
     width: var(--sidebar-width);
     flex-shrink: 0;
   }

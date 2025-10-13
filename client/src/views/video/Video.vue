@@ -1,7 +1,7 @@
 <template>
-  <div class="my-10 mx-15">
-    <div class="youtube-layout">
-      <div class="youtube-primary">
+  <div>
+    <div class="video-layout">
+      <div class="video-primary">
         <div
           ref="videoContainer"
           class="overflow-hidden youtube-player-container rounded-xl"
@@ -26,7 +26,7 @@
 
       <div
         v-if="uiStore.transcriptSidebarOpen"
-        class="youtube-sidebar border border-base-300 rounded-xl"
+        class="transcript-container border border-base-300 rounded-xl"
       >
         <div class="h-[500px] flex">
           <TranscriptSecondary
@@ -37,6 +37,9 @@
             :removeAnnotations="removeAnnotations"
           />
         </div>
+      </div>
+      <div class="dictionary-container">
+        <Dictionary />
       </div>
     </div>
   </div>
@@ -49,6 +52,7 @@ import type { TranslatedSnippet } from "../../types";
 import YouTube from "vue3-youtube";
 import TranscriptPrimary from "./TranscriptPrimary.vue";
 import TranscriptSecondary from "./TranscriptSecondary.vue";
+import Dictionary from "./Dictionary.vue";
 import { useUiStore } from "../../stores/uiStore.js";
 
 const route = useRoute();
