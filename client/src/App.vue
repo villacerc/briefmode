@@ -7,4 +7,5 @@
 
 <script setup>
 import Navbar from "./components/Navbar.vue";
+document.body.classList.add("hide-scrollbar");
 </script>

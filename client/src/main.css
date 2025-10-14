@@ -1,5 +1,7 @@
 @import "tailwindcss";
-@plugin "daisyui";
+@plugin "daisyui" {
+  exclude: scrollbar;
+}
 
 @plugin "daisyui/theme" {
   name: "unfriendlydonut";
@@ -8,6 +10,7 @@
   color-scheme: "light";
   --color-base-100: oklch(93% 0.032 17.717);
   --color-base-200: oklch(88% 0.062 18.334);
+  --color-base-200-dark: oklch(84% 0.082 18.739);
   --color-base-300: oklch(80% 0.114 19.571);
   --color-base-content: oklch(39% 0.141 25.723);
   --color-primary: oklch(70% 0.191 22.216);
@@ -36,43 +39,45 @@
   --noise: 0;
 }
 
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background-color: var(--color-base-200-dark);
+    -webkit-border-radius: 10px;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    -webkit-border-radius: 10px;
+    border-radius: 10px;
+    background: var(--color-warning); 
+}
+
 :root {
-  --sidebar-width: 600px;
-  --space-above-player: 7.8125rem;
-  --space-below-player: 6rem;
-  --max-player-height: calc(100vh - var(--space-above-player) - var(--space-below-player));
-  --max-player-width: 800px;
+  --space-above: 2.5rem;
+  --space-below: 6rem;
+  --max-player-height: calc(100vh - var(--space-above) - var(--space-below));
+  --max-player-width: 600px;
 }
 
-.video-layout {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+.hide-scrollbar {
+  overflow: hidden;
 }
 
-.video-primary {
-  flex: 1;
-  max-width: var(--max-player-width);
-}
-
-.youtube-player-container {
-  width: 100%;
+.yt-player-container {
   aspect-ratio: 16 / 9;
   max-height: var(--max-player-height);
 }
 
 .dictionary-container {
-  width: 300px;
+  height: calc(100vh - var(--space-above));
 }
 
 /* Mobile responsive */
-@media (min-width: 1015px) {
-  .video-layout {
-    flex-direction: row;
-  }
-
-  .transcript-container {
-    width: var(--sidebar-width);
-    flex-shrink: 0;
+@media (min-width: 1024px) {
+  .yt-player-container {
+    max-width: var(--max-player-width);
   }
 }

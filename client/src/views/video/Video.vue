@@ -1,10 +1,10 @@
 <template>
-  <div>
-    <div class="video-layout">
-      <div class="video-primary">
+  <div class="flex relative">
+    <div class="flex w-full">
+      <div class="yt-primary flex-1">
         <div
           ref="videoContainer"
-          class="overflow-hidden youtube-player-container rounded-xl"
+          class="yt-player-container m-auto overflow-hidden rounded-xl"
         >
           <youtube
             ref="youtubePlayer"
@@ -15,20 +15,21 @@
             @ready="onReady"
           />
         </div>
-        <TranscriptPrimary
-          :activeIndex="activeIndex"
-          :isAnnotation="isAnnotation"
-          :removeAnnotations="removeAnnotations"
-          :snippets="snippets"
-          :languageUsesSpaces="languageUsesSpaces"
-        />
+        <div class="max-w-[700px] m-auto">
+          <TranscriptPrimary
+            :activeIndex="activeIndex"
+            :isAnnotation="isAnnotation"
+            :removeAnnotations="removeAnnotations"
+            :snippets="snippets"
+            :languageUsesSpaces="languageUsesSpaces"
+          />
+        </div>
       </div>
-
       <div
         v-if="uiStore.transcriptSidebarOpen"
-        class="transcript-container border border-base-300 rounded-xl"
+        class="hidden flex-1 border border-base-300 rounded-xl lg:block"
       >
-        <div class="h-[500px] flex">
+        <div class="h-[500px]">
           <TranscriptSecondary
             :activeIndex="activeIndex"
             :snippets="snippets"
@@ -38,7 +39,12 @@
           />
         </div>
       </div>
-      <div class="dictionary-container">
+    </div>
+    <div
+      v-if="uiStore.dictionarySidebarOpen"
+      class="dictionary-container lg:relative max-w-[350px] flex flex-col bg-base-200"
+    >
+      <div class="flex-1 overflow-y-auto">
         <Dictionary />
       </div>
     </div>
