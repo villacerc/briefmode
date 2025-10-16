@@ -1,21 +1,28 @@
 <template>
   <nav class="bg-base-200">
     <div class="flex py-1 px-2">
-      <h1 class="font-bold text-lg self-center">
+      <h1 class="font-medium text-lg self-center">
         Easy Japanese 1 - Typical Japanese
       </h1>
       <ul class="flex ml-auto space-x-2">
         <li
-          class="bg-base-100 rounded-full w-10 h-10 flex items-center justify-center hover:cursor-pointer hover:bg-base-300 hover:text-white"
+          :class="[
+            uiStore.transcriptSidebarOpen ? 'btn-circle-active' : 'btn-circle',
+          ]"
           @click="toggleTranscriptSidebar"
         >
-          <div><TranscriptIcon /></div>
+          <div><TranscriptIcon class="w-6 h-6" /></div>
         </li>
         <li
-          class="bg-base-100 rounded-full w-10 h-10 flex items-center justify-center hover:cursor-pointer hover:bg-base-300"
+          :class="[
+            uiStore.dictionarySidebarOpen ? 'btn-circle-active' : 'btn-circle',
+          ]"
           @click="toggleDictionarySidebar"
         >
           <div><DictionaryIcon /></div>
+        </li>
+        <li class="btn-circle">
+          <div><MoreIcon class="w-6 h-6" /></div>
         </li>
       </ul>
     </div>
@@ -26,6 +33,7 @@
 import { useUiStore } from "../stores/uiStore.js";
 import TranscriptIcon from "../icons/Transcript.vue";
 import DictionaryIcon from "../icons/Dictionary.vue";
+import MoreIcon from "../icons/More.vue";
 const uiStore = useUiStore();
 
 function toggleTranscriptSidebar() {
