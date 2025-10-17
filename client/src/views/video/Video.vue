@@ -1,7 +1,7 @@
 <template>
   <div class="flex relative">
     <div class="flex w-full">
-      <div class="yt-primary flex-1">
+      <div class="yt-primary flex-1 mt-5">
         <div
           ref="videoContainer"
           class="yt-player-container m-auto overflow-hidden rounded-xl"

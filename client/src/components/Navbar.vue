@@ -1,5 +1,5 @@
 <template>
-  <nav class="bg-base-200 fixed top-0 left-0 right-0 z-10">
+  <nav>
     <div class="flex py-1 px-2">
       <h1 class="font-medium text-lg self-center">
         Easy Japanese 1 - Typical Japanese
@@ -34,7 +34,7 @@
             enter-to-class="opacity-100 transform translate-y-0 scale-100"
           >
             <ul
-              class="absolute top-full z-99 right-[-8px] mt-1 w-40 bg-base-100 rounded-md shadow-md"
+              class="absolute top-full z-1 right-[-8px] mt-1 w-40 bg-base-100 rounded-md shadow-md"
               v-if="uiStore.moreMenuOpen"
             >
               <li>

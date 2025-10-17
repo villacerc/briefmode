@@ -1,6 +1,6 @@
 <template>
   <div
-    class="text-center relative group text-2xl mt-2 px-5 py-2 bg-base-200 border border-base-300 rounded-xl"
+    class="text-center relative group text-2xl mt-5 px-5 py-3 bg-base-100 rounded-xl"
   >
     <span
       v-for="(line, i) in visibleLines"
@@ -9,15 +9,15 @@
       :class="[
         line.snippet_id === snippets[activeIndex].snippet_id &&
         !isAnnotation(line.text)
-          ? 'bg-base-100'
-          : '',
+          ? 'bg-accent'
+          : 'text-base-content/45',
         languageUsesSpaces(line.translation_language) ? 'mr-1' : '',
       ]"
     >
       <span
         v-for="(part, j) in line.snippet_words"
         :key="j"
-        class="relative cursor-pointer inline-block group/word hover:bg-secondary hover:text-base-content rounded-sm"
+        class="relative cursor-pointer inline-block group/word hover:bg-info hover:text-base-content rounded-sm"
       >
         <p class="text-sm">
           {{ removeAnnotations(part.romanized) }}
@@ -31,10 +31,10 @@
 
         <!-- Hover popup -->
         <div
-          class="absolute bottom-full left-1/2 -translate-x-1/2 opacity-0 scale-90 invisible origin-bottom group-hover/word:visible group-hover/word:opacity-100 group-hover/word:scale-100 transition-opacity transition-transform duration-250 ease-out z-50"
+          class="absolute bottom-full left-1/2 -translate-x-1/2 opacity-0 scale-90 invisible origin-bottom group-hover/word:visible group-hover/word:opacity-100 group-hover/word:scale-100 transition-opacity transition-transform duration-250 ease-out z-1"
         >
           <div class="mb-2">
-            <div class="card shadow-lg bg-base-100 rounded-xl p-3 pt-2">
+            <div class="card shadow-lg bg-info rounded-xl p-3 pt-2">
               <ul class="text-md text-base-content w-fit whitespace-nowrap">
                 <p class="font-bold mb-1">
                   {{
@@ -54,7 +54,7 @@
     </span>
   </div>
   <div
-    class="text-center relative group text-2xl mt-2 px-5 py-2 border border-base-300 rounded-xl"
+    class="text-center bg-base-100 relative group text-2xl mt-2 px-5 py-3 rounded-xl"
   >
     <span
       v-for="(line, i) in visibleLines"
@@ -63,8 +63,8 @@
       :class="[
         line.snippet_id === snippets[activeIndex].snippet_id &&
         !isAnnotation(line.text)
-          ? 'bg-base-200'
-          : '',
+          ? 'bg-base-accent'
+          : 'text-base-content/45',
         languageUsesSpaces(line.translation_language) ? 'mr-1' : '',
       ]"
     >
