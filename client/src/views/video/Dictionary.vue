@@ -2,7 +2,6 @@
   <div class="h-full">
     <div class="p-2">
       <label className="input p-2">
-        <SearchIcon class="mr-1" />
         <input type="search" required placeholder="Search" />
       </label>
     </div>
@@ -27,6 +26,4 @@
   </div>
 </template>
 
-<script setup>
-import SearchIcon from "../../icons/Search.vue";
-</script>
+<script setup></script>
