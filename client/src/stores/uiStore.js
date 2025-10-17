@@ -4,6 +4,7 @@ export const useUiStore = defineStore('ui', {
   state: () => ({
     transcriptSidebarOpen: true,
     dictionarySidebarOpen: true,
+    moreMenuOpen: false,
   }),
   actions: {
     toggleTranscriptSidebar() {
@@ -11,6 +12,9 @@ export const useUiStore = defineStore('ui', {
     },
     toggleDictionarySidebar() {
       this.dictionarySidebarOpen = !this.dictionarySidebarOpen;
+    },
+    toggleMoreMenu() {
+      this.moreMenuOpen = !this.moreMenuOpen;
     },
   },
 });
