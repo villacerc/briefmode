@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full">
+  <div class="pb-20">
     <div class="p-2">
       <label className="input p-2">
         <input type="search" required placeholder="Search" />
@@ -20,9 +20,6 @@
         <p>Tohoku is rich in nature.</p>
       </div>
     </div>
-
-    <br />
-    <br />
   </div>
 </template>
 

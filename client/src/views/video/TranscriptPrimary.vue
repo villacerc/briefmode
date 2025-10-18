@@ -14,10 +14,10 @@
         languageUsesSpaces(line.translation_language) ? 'mr-1' : '',
       ]"
     >
-      <span
+      <Tooltip
         v-for="(part, j) in line.snippet_words"
         :key="j"
-        class="relative cursor-pointer inline-block group/word hover:bg-info hover:text-base-content rounded-sm"
+        class="cursor-pointer hover:bg-info hover:text-base-content rounded-sm"
       >
         <p class="text-sm">
           {{ removeAnnotations(part.romanized) }}
@@ -28,29 +28,25 @@
         <span v-if="languageUsesSpaces(line.transcript_language)">
           {{ " " }}
         </span>
-
-        <!-- Hover popup -->
-        <div
-          class="absolute bottom-full left-1/2 -translate-x-1/2 opacity-0 scale-90 invisible origin-bottom group-hover/word:visible group-hover/word:opacity-100 group-hover/word:scale-100 transition-opacity transition-transform duration-250 ease-out z-1"
-        >
-          <div class="mb-2">
-            <div class="card shadow-lg bg-info rounded-xl p-3 pt-2">
-              <ul class="text-md text-base-content w-fit whitespace-nowrap">
-                <p class="font-bold mb-1">
-                  {{
-                    part.part_of_speech.charAt(0).toUpperCase() +
-                    part.part_of_speech.slice(1) +
-                    ":"
-                  }}
-                </p>
-                <li v-for="(t, i) in part.translations" :key="i">
-                  {{ t.text }}
-                </li>
-              </ul>
-            </div>
+        <template #tooltip-content>
+          <div
+            class="bg-info text-center rounded-xl p-3 pt-2 w-fit whitespace-nowrap"
+          >
+            <ul>
+              <li class="font-bold mb-1">
+                {{
+                  part.part_of_speech.charAt(0).toUpperCase() +
+                  part.part_of_speech.slice(1) +
+                  ":"
+                }}
+              </li>
+              <li v-for="(t, i) in part.translations" :key="i">
+                {{ t.text }}
+              </li>
+            </ul>
           </div>
-        </div>
-      </span>
+        </template>
+      </Tooltip>
     </span>
   </div>
   <div
@@ -76,6 +72,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { TranslatedSnippet } from "../../types";
+import Tooltip from "../../components/Tooltip.vue";
 
 const VISIBLE_LINES_SIZE = 3;
 

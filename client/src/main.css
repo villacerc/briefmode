@@ -24,8 +24,8 @@
   --color-info-content: oklch(97% 0.013 236.62);
   --color-success: oklch(62% 0.194 149.214);
   --color-success-content: oklch(98% 0.018 155.826);
-  --color-warning: oklch(64% 0.222 41.116);
-  --color-warning-content: oklch(98% 0.016 73.684);
+  --color-warning: #FEB7A8;
+  --color-warning-content: #FFFFFF;
   --color-error: oklch(57% 0.245 27.325);
   --color-error-content: oklch(97% 0.013 17.38);
   --radius-selector: 0rem;
@@ -80,7 +80,6 @@ body {
   --space-above: 2.5rem;
   --space-below: 6rem;
   --max-player-height: calc(100vh - var(--space-above) - var(--space-below));
-  --max-player-width: 600px;
 }
 
 .btn-circle {
@@ -116,13 +115,15 @@ body {
   max-height: var(--max-player-height);
 }
 
+.ts-secondary-container {
+  height: calc(100vh - var(--space-above));
+}
+
 .dictionary-container {
   height: calc(100vh - var(--space-above));
 }
 
 /* Mobile responsive */
 @media (min-width: 1024px) {
-  .yt-player-container {
-    max-width: var(--max-player-width);
-  }
+
 }

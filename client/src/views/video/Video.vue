@@ -1,7 +1,7 @@
 <template>
   <div class="flex relative">
     <div class="flex w-full">
-      <div class="yt-primary flex-1 mt-5">
+      <div class="yt-primary flex-1">
         <div
           ref="videoContainer"
           class="yt-player-container m-auto overflow-hidden rounded-xl"
@@ -15,7 +15,7 @@
             @ready="onReady"
           />
         </div>
-        <div class="max-w-[700px] m-auto">
+        <div class="m-auto">
           <TranscriptPrimary
             :activeIndex="activeIndex"
             :isAnnotation="isAnnotation"
@@ -27,9 +27,9 @@
       </div>
       <div
         v-if="uiStore.transcriptSidebarOpen"
-        class="hidden flex-1 border border-base-300 rounded-xl lg:block"
+        class="ts-secondary-container flex-1 rounded-xl flex flex-col"
       >
-        <div class="h-[500px]">
+        <div class="flex-1 overflow-y-auto">
           <TranscriptSecondary
             :activeIndex="activeIndex"
             :snippets="snippets"
