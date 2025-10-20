@@ -1,42 +1,100 @@
 <template>
   <div
-    class="relative inline-block group/tooltip"
-    @mouseenter="checkPopupPosition"
+    class="relative inline-block"
+    @mouseenter="onTriggerEnter"
+    @mouseleave="onTriggerLeave"
   >
     <slot />
 
-    <!-- Popup slot -->
-    <div
-      ref="popupEl"
-      class="absolute z-1 left-1/2 -translate-x-1/2 opacity-0 scale-90 invisible group-hover/tooltip:visible group-hover/tooltip:opacity-100 group-hover/tooltip:scale-100 transition-opacity transition-transform duration-250 ease-out"
-      :class="
-        popupPosition === 'below'
-          ? 'top-full origin-top'
-          : 'bottom-full origin-bottom'
-      "
-    >
-      <div :class="popupPosition === 'below' ? 'mt-2' : 'mb-2'">
-        <slot name="tooltip-content" />
+    <!-- Teleport popup to body -->
+    <Teleport to="body">
+      <div
+        v-if="showPopup"
+        class="fixed z-[10]"
+        :style="popupStyle"
+        @mouseenter="onPopupEnter"
+        @mouseleave="onPopupLeave"
+      >
+        <div ref="popupEl" :style="popupContentStyle">
+          <slot name="tooltip-content" />
+        </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, reactive } from "vue";
 
 const popupEl = ref<HTMLElement | null>(null);
-const popupPosition = ref<"above" | "below">("below");
+const popupAbove = ref(true);
+const showPopup = ref(false);
+const triggerHovered = ref(false);
+const popupHovered = ref(false);
+const hideTimer = ref<number | null>(null);
+const popupStyle = reactive({
+  height: "auto",
+  left: "0px",
+  top: "0px",
+  transform: "translate(-50%, 0)",
+});
+const popupContentStyle = reactive({
+  marginTop: "0px",
+});
 
+// --- POSITIONING ---
 const checkPopupPosition = (event: MouseEvent) => {
-  const span = event.currentTarget as HTMLElement;
-  const popup = popupEl.value;
-  if (!span || !popup) return;
+  const targetEl = event.currentTarget as HTMLElement;
+  if (!targetEl) return;
 
-  const spanRect = span.getBoundingClientRect();
-  const popupRect = popup.getBoundingClientRect();
-  const popupHeight = popupRect.height;
+  showPopup.value = true;
 
-  popupPosition.value = spanRect.top < popupHeight + 70 ? "below" : "above";
+  requestAnimationFrame(() => {
+    const popup = popupEl.value;
+    if (!popup) return;
+
+    const targetRect = targetEl.getBoundingClientRect();
+    const popupRect = popup.getBoundingClientRect();
+
+    const above = targetRect.top > popupRect.height + 10;
+    popupAbove.value = above;
+
+    popupStyle.height = `${popupRect.height + 10}px`;
+    popupStyle.left = `${targetRect.left + targetRect.width / 2}px`;
+    popupStyle.top = above
+      ? `${targetRect.top - popupRect.height - 10}px`
+      : `${targetRect.bottom}px`;
+    popupContentStyle.marginTop = above ? "0" : "10px";
+  });
 };
+
+// --- HOVER MANAGEMENT ---
+function scheduleHide() {
+  if (hideTimer.value) clearTimeout(hideTimer.value);
+  hideTimer.value = window.setTimeout(() => {
+    if (!triggerHovered.value && !popupHovered.value) {
+      showPopup.value = false;
+    }
+  }, 1); // delay makes it smoother when moving between target and popup
+}
+
+function onTriggerEnter(event: MouseEvent) {
+  triggerHovered.value = true;
+  checkPopupPosition(event);
+}
+
+function onTriggerLeave() {
+  triggerHovered.value = false;
+  scheduleHide();
+}
+
+function onPopupEnter() {
+  popupHovered.value = true;
+  if (hideTimer.value) clearTimeout(hideTimer.value);
+}
+
+function onPopupLeave() {
+  popupHovered.value = false;
+  scheduleHide();
+}
 </script>

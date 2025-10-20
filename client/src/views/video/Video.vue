@@ -29,7 +29,7 @@
         v-if="uiStore.transcriptSidebarOpen"
         class="ts-secondary-container flex-1 rounded-xl flex flex-col"
       >
-        <div class="flex-1 overflow-y-auto">
+        <div class="flex-1 overflow-y-scroll overflow-x-hidden">
           <TranscriptSecondary
             :activeIndex="activeIndex"
             :snippets="snippets"
