@@ -24,7 +24,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from "vue";
+import { ref, reactive, nextTick } from "vue";
 
 const popupEl = ref<HTMLElement | null>(null);
 const popupAbove = ref(true);
@@ -40,32 +40,39 @@ const popupStyle = reactive({
 });
 const popupContentStyle = reactive({
   marginTop: "0px",
+  opacity: "1",
+  transform: "scale(1)",
+  transformOrigin: "center top",
+  transition: "none",
 });
 
 // --- POSITIONING ---
-const checkPopupPosition = (event: MouseEvent) => {
+const renderPopup = async (event: MouseEvent) => {
   const targetEl = event.currentTarget as HTMLElement;
   if (!targetEl) return;
 
   showPopup.value = true;
 
-  requestAnimationFrame(() => {
-    const popup = popupEl.value;
-    if (!popup) return;
+  await nextTick(); // wait for popup to render
 
-    const targetRect = targetEl.getBoundingClientRect();
-    const popupRect = popup.getBoundingClientRect();
+  const popup = popupEl.value;
+  if (!popup) return;
 
-    const above = targetRect.top > popupRect.height + 10;
-    popupAbove.value = above;
+  const targetRect = targetEl.getBoundingClientRect();
+  const popupRect = popup.getBoundingClientRect();
 
-    popupStyle.height = `${popupRect.height + 10}px`;
-    popupStyle.left = `${targetRect.left + targetRect.width / 2}px`;
-    popupStyle.top = above
-      ? `${targetRect.top - popupRect.height - 10}px`
-      : `${targetRect.bottom}px`;
-    popupContentStyle.marginTop = above ? "0" : "10px";
-  });
+  const above = targetRect.top > popupRect.height + 10;
+  popupAbove.value = above;
+
+  popupStyle.height = `${popupRect.height + 10}px`;
+  popupStyle.left = `${targetRect.left + targetRect.width / 2}px`;
+  popupStyle.top = above
+    ? `${targetRect.top - popupRect.height - 10}px`
+    : `${targetRect.bottom}px`;
+  popupContentStyle.marginTop = above ? "0" : "10px";
+  popupContentStyle.transformOrigin = above ? "center bottom" : "center top";
+
+  animatePopup();
 };
 
 // --- HOVER MANAGEMENT ---
@@ -75,12 +82,28 @@ function scheduleHide() {
     if (!triggerHovered.value && !popupHovered.value) {
       showPopup.value = false;
     }
-  }, 1); // delay makes it smoother when moving between target and popup
+  }, 1);
+}
+
+function animatePopup() {
+  popupContentStyle.opacity = "0";
+  popupContentStyle.transform = "scale(0.95)";
+  popupContentStyle.transition = "none";
+
+  requestAnimationFrame(() => {
+    popupContentStyle.transition =
+      "opacity 0.2s ease-out, transform 0.2s ease-out";
+
+    requestAnimationFrame(() => {
+      popupContentStyle.opacity = "1";
+      popupContentStyle.transform = "scale(1)";
+    });
+  });
 }
 
 function onTriggerEnter(event: MouseEvent) {
   triggerHovered.value = true;
-  checkPopupPosition(event);
+  renderPopup(event);
 }
 
 function onTriggerLeave() {
