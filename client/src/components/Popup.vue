@@ -57,16 +57,17 @@ const renderPopup = async (event: MouseEvent) => {
 
   const targetRect = targetEl.getBoundingClientRect();
   const popupRect = popup.getBoundingClientRect();
+  const gap = 10; // gap between target and popup content
 
-  const above = targetRect.top > popupRect.height + 10;
+  const above = targetRect.top > popupRect.height + gap;
   popupAbove.value = above;
 
-  popupStyle.height = `${popupRect.height + 10}px`;
+  popupStyle.height = `${popupRect.height + gap}px`;
   popupStyle.left = `${targetRect.left + targetRect.width / 2}px`;
   popupStyle.top = above
-    ? `${targetRect.top - popupRect.height - 10}px`
+    ? `${targetRect.top - popupRect.height - gap}px`
     : `${targetRect.bottom}px`;
-  popupContentStyle.marginTop = above ? "0" : "10px";
+  popupContentStyle.marginTop = above ? "0" : `${gap}px`;
   popupContentStyle.transformOrigin = above ? "center bottom" : "center top";
 
   animatePopup();
