@@ -3,14 +3,18 @@
     <div
       v-for="(snippet, index) in snippets"
       :key="index"
-      class="grid grid-cols-[1.5fr_1fr] gap-2 rounded-md items-start mb-5"
-      :class="[index === activeIndex ? 'bg-accent' : 'bg-base-100']"
+      class="text-base-content/45 hover:text-base-content border border-transparent hover:border-slate-300 transition max-w-[820px] grid grid-cols-[1.5fr_1fr] gap-2 rounded-2xl items-start mb-5 shadow-sm"
+      :class="[
+        index === activeIndex
+          ? 'bg-accent text-base-content/100'
+          : 'bg-base-100',
+      ]"
     >
       <div class="flex p-2 gap-4 items-center rounded-md">
-        <div class="ml-2 px-2 rounded-md bg-warning h-fit">
+        <div class="ml-2 px-2 rounded-2xl bg-warning h-fit">
           <p>0:01</p>
         </div>
-        <div>
+        <div class="p-4 rounded-2xl bg-base-100 shadow-sm">
           <Popup
             v-for="(part, j) in snippet.snippet_words"
             :key="j"
@@ -24,7 +28,7 @@
             </p>
             <template #popup-content>
               <div
-                class="bg-info text-center rounded-xl p-3 pt-2 w-fit whitespace-nowrap"
+                class="bg-info shadow-sm text-center rounded-lg p-3 pt-2 w-fit whitespace-nowrap"
               >
                 <ul>
                   <li class="font-bold mb-1">
@@ -44,7 +48,9 @@
         </div>
       </div>
       <div class="p-2">
-        <p>{{ snippet.translation }}</p>
+        <div class="p-4">
+          <p>{{ snippet.translation }}</p>
+        </div>
       </div>
     </div>
   </div>

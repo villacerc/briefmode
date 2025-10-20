@@ -1,6 +1,6 @@
 <template>
   <div
-    class="text-center relative group text-2xl mt-5 px-5 py-3 bg-base-100 rounded-xl"
+    class="shadow-sm text-center relative group text-2xl mt-5 px-5 py-3 bg-base-100 rounded-xl"
   >
     <span
       v-for="(line, i) in visibleLines"
@@ -50,7 +50,7 @@
     </span>
   </div>
   <div
-    class="text-center bg-base-100 relative group text-2xl mt-2 px-5 py-3 rounded-xl"
+    class="shadow-sm text-center bg-base-100 relative group text-2xl mt-2 px-5 py-3 rounded-xl"
   >
     <span
       v-for="(line, i) in visibleLines"

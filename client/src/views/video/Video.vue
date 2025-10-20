@@ -1,7 +1,7 @@
 <template>
   <div class="flex relative">
     <div class="flex w-full">
-      <div class="yt-primary flex-1">
+      <div class="yt-primary flex-1 pl-5">
         <div
           ref="videoContainer"
           class="yt-player-container m-auto overflow-hidden rounded-xl"
@@ -29,7 +29,7 @@
         v-if="uiStore.transcriptSidebarOpen"
         class="ts-secondary-container flex-1 rounded-xl flex flex-col"
       >
-        <div class="flex-1 overflow-y-scroll overflow-x-hidden">
+        <div class="flex-1 overflow-y-scroll overflow-x-hidden pl-5">
           <TranscriptSecondary
             :activeIndex="activeIndex"
             :snippets="snippets"
