@@ -3,11 +3,11 @@
     <div
       v-for="(snippet, index) in snippets"
       :key="index"
-      class="text-base-content/45 hover:text-base-content border border-transparent hover:border-slate-300 transition max-w-[820px] grid grid-cols-[1.5fr_1fr] gap-2 rounded-2xl items-start mb-5 shadow-sm"
+      class="cursor-pointer text-base-content/45 hover:text-base-content border hover:border-slate-300 transition max-w-[820px] grid grid-cols-[1.5fr_1fr] gap-2 rounded-2xl items-start mb-5 shadow-sm"
       :class="[
         index === activeIndex
-          ? 'bg-accent text-base-content/100'
-          : 'bg-base-100',
+          ? 'bg-accent text-base-content/100 border-slate-300'
+          : 'bg-base-100 border-transparent',
       ]"
     >
       <div class="flex p-2 gap-4 items-center rounded-md">

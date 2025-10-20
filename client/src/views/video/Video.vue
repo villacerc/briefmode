@@ -1,7 +1,7 @@
 <template>
   <div class="flex relative">
     <div class="flex w-full">
-      <div class="yt-primary flex-1 pl-5">
+      <div class="yt-primary flex-1 px-5">
         <div
           ref="videoContainer"
           class="yt-player-container m-auto overflow-hidden rounded-xl"
@@ -15,7 +15,7 @@
             @ready="onReady"
           />
         </div>
-        <div class="m-auto">
+        <div class="m-auto ts-primary-container">
           <TranscriptPrimary
             :activeIndex="activeIndex"
             :isAnnotation="isAnnotation"
@@ -27,9 +27,9 @@
       </div>
       <div
         v-if="uiStore.transcriptSidebarOpen"
-        class="ts-secondary-container flex-1 rounded-xl flex flex-col"
+        class="hidden lg:flex ts-secondary-container flex-1 rounded-xl flex flex-col"
       >
-        <div class="flex-1 overflow-y-scroll overflow-x-hidden pl-5">
+        <div class="flex-1 overflow-y-scroll overflow-x-hidden">
           <TranscriptSecondary
             :activeIndex="activeIndex"
             :snippets="snippets"
@@ -42,7 +42,7 @@
     </div>
     <div
       v-if="uiStore.dictionarySidebarOpen"
-      class="dictionary-container lg:relative max-w-[350px] flex flex-col bg-base-200"
+      class="absolute right-0 dictionary-container lg:relative max-w-[350px] flex flex-col bg-base-200"
     >
       <div class="flex-1 overflow-y-auto">
         <Dictionary />

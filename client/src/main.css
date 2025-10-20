@@ -80,6 +80,8 @@ body {
   --space-above: 2.5rem;
   --space-below: 6rem;
   --max-player-height: calc(100vh - var(--space-above) - var(--space-below));
+  --max-player-width: calc(100vw - 50rem);
+  --min-player-width: 300px;
 }
 
 .btn-circle {
@@ -113,6 +115,12 @@ body {
 .yt-player-container {
   aspect-ratio: 16 / 9;
   max-height: var(--max-player-height);
+  max-width: var(--max-player-width);
+  min-width: var(--min-player-width);
+}
+
+.ts-primary-container {
+  max-width: 45rem;
 }
 
 .ts-secondary-container {
