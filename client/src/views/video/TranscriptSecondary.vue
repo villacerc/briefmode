@@ -11,7 +11,7 @@
           <p>0:01</p>
         </div>
         <div>
-          <Tooltip
+          <Popup
             v-for="(part, j) in snippet.snippet_words"
             :key="j"
             class="cursor-pointer hover:bg-info rounded-sm"
@@ -22,7 +22,7 @@
             <p>
               {{ part.text }}
             </p>
-            <template #tooltip-content>
+            <template #popup-content>
               <div
                 class="bg-info text-center rounded-xl p-3 pt-2 w-fit whitespace-nowrap"
               >
@@ -40,7 +40,7 @@
                 </ul>
               </div>
             </template>
-          </Tooltip>
+          </Popup>
         </div>
       </div>
       <div class="p-2">
@@ -51,9 +51,8 @@
 </template>
 
 <script setup lang="ts">
-import { reactive } from "vue";
 import type { TranslatedSnippet } from "../../types";
-import Tooltip from "../../components/Tooltip.vue";
+import Popup from "../../components/Popup.vue";
 
 const props = defineProps({
   activeIndex: {

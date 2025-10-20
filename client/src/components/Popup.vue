@@ -2,7 +2,7 @@
   <div
     class="relative inline-block"
     @mouseenter="onTriggerEnter"
-    @mouseleave="onTriggerLeave"
+    @mouseleave="hidePopup"
   >
     <slot />
 
@@ -13,10 +13,10 @@
         class="fixed z-[10]"
         :style="popupStyle"
         @mouseenter="onPopupEnter"
-        @mouseleave="onPopupLeave"
+        @mouseleave="hidePopup"
       >
         <div ref="popupEl" :style="popupContentStyle">
-          <slot name="tooltip-content" />
+          <slot name="popup-content" />
         </div>
       </div>
     </Teleport>
@@ -29,8 +29,6 @@ import { ref, reactive, nextTick } from "vue";
 const popupEl = ref<HTMLElement | null>(null);
 const popupAbove = ref(true);
 const showPopup = ref(false);
-const triggerHovered = ref(false);
-const popupHovered = ref(false);
 const hideTimer = ref<number | null>(null);
 const popupStyle = reactive({
   height: "auto",
@@ -46,7 +44,6 @@ const popupContentStyle = reactive({
   transition: "none",
 });
 
-// --- POSITIONING ---
 const renderPopup = async (event: MouseEvent) => {
   const targetEl = event.currentTarget as HTMLElement;
   if (!targetEl) return;
@@ -75,16 +72,6 @@ const renderPopup = async (event: MouseEvent) => {
   animatePopup();
 };
 
-// --- HOVER MANAGEMENT ---
-function scheduleHide() {
-  if (hideTimer.value) clearTimeout(hideTimer.value);
-  hideTimer.value = window.setTimeout(() => {
-    if (!triggerHovered.value && !popupHovered.value) {
-      showPopup.value = false;
-    }
-  }, 1);
-}
-
 function animatePopup() {
   popupContentStyle.opacity = "0";
   popupContentStyle.transform = "scale(0.95)";
@@ -102,22 +89,19 @@ function animatePopup() {
 }
 
 function onTriggerEnter(event: MouseEvent) {
-  triggerHovered.value = true;
+  if (hideTimer.value) clearTimeout(hideTimer.value);
   renderPopup(event);
 }
 
-function onTriggerLeave() {
-  triggerHovered.value = false;
-  scheduleHide();
-}
-
 function onPopupEnter() {
-  popupHovered.value = true;
   if (hideTimer.value) clearTimeout(hideTimer.value);
 }
 
-function onPopupLeave() {
-  popupHovered.value = false;
-  scheduleHide();
+function hidePopup() {
+  // delay hiding popup
+  if (hideTimer.value) clearTimeout(hideTimer.value);
+  hideTimer.value = window.setTimeout(() => {
+    showPopup.value = false;
+  }, 1);
 }
 </script>

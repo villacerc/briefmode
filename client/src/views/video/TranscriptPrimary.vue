@@ -14,7 +14,7 @@
         languageUsesSpaces(line.translation_language) ? 'mr-1' : '',
       ]"
     >
-      <Tooltip
+      <Popup
         v-for="(part, j) in line.snippet_words"
         :key="j"
         class="cursor-pointer hover:bg-info hover:text-base-content rounded-sm"
@@ -28,7 +28,7 @@
         <span v-if="languageUsesSpaces(line.transcript_language)">
           {{ " " }}
         </span>
-        <template #tooltip-content>
+        <template #popup-content>
           <div
             class="bg-info text-center rounded-xl p-3 pt-2 w-fit whitespace-nowrap"
           >
@@ -46,7 +46,7 @@
             </ul>
           </div>
         </template>
-      </Tooltip>
+      </Popup>
     </span>
   </div>
   <div
@@ -72,7 +72,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { TranslatedSnippet } from "../../types";
-import Tooltip from "../../components/Tooltip.vue";
+import Popup from "../../components/Popup.vue";
 
 const VISIBLE_LINES_SIZE = 3;
 
