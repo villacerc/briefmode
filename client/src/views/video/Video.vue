@@ -1,21 +1,24 @@
 <template>
   <div class="flex relative">
     <div class="flex w-full">
-      <div class="yt-primary flex-1 px-5">
-        <div
-          ref="videoContainer"
-          class="yt-player-container m-auto overflow-hidden rounded-xl"
-        >
+      <div class="yt-ts-container w-1/2 px-5 flex flex-col gap-3 items-center">
+        <div ref="videoContainer" class="yt-player-container w-full">
           <youtube
             ref="youtubePlayer"
             :src="`https://www.youtube.com/watch?v=${route.params.id}`"
+            @ready="onReady"
             width="100%"
             height="100%"
-            :style="{ width: '100%', height: '100%' }"
-            @ready="onReady"
+            :style="{
+              aspectRatio: '16 / 9',
+              borderRadius: '0.75rem',
+              overflow: 'hidden',
+            }"
           />
         </div>
-        <div class="m-auto ts-primary-container">
+        <div
+          class="ts-primary-container h-full overflow-y-scroll overflow-x-hidden pb-3"
+        >
           <TranscriptPrimary
             :activeIndex="activeIndex"
             :isAnnotation="isAnnotation"
@@ -27,7 +30,7 @@
       </div>
       <div
         v-if="uiStore.transcriptSidebarOpen"
-        class="hidden lg:flex ts-secondary-container flex-1 rounded-xl flex flex-col"
+        class="hidden lg:flex ts-secondary-container w-1/2 rounded-xl flex-col"
       >
         <div class="flex-1 overflow-y-scroll overflow-x-hidden">
           <TranscriptSecondary

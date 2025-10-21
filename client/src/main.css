@@ -77,10 +77,10 @@ body {
 }
 
 :root {
-  --space-above: 2.5rem;
+  --space-above: 3rem;
   --space-below: 6rem;
   --max-player-height: calc(100vh - var(--space-above) - var(--space-below));
-  --max-player-width: calc(100vw - 50rem);
+  --max-player-width: calc(100vw - 40rem);
   --min-player-width: 300px;
 }
 
@@ -113,21 +113,16 @@ body {
 }
 
 .yt-player-container {
-  aspect-ratio: 16 / 9;
   max-height: var(--max-player-height);
   max-width: var(--max-player-width);
-  min-width: var(--min-player-width);
+  min-width: var(--min-player-width); 
 }
 
 .ts-primary-container {
   max-width: 45rem;
 }
 
-.ts-secondary-container {
-  height: calc(100vh - var(--space-above));
-}
-
-.dictionary-container {
+.yt-ts-container , .ts-secondary-container, .dictionary-container {
   height: calc(100vh - var(--space-above));
 }
 

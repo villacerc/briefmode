@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="visibleLines.length > 0"
-    class="shadow-sm border border-slate-300 text-center relative group text-2xl mt-5 px-5 py-3 bg-base-100 rounded-xl"
+    class="shadow-sm border border-slate-300 text-center relative group text-2xl px-5 py-3 bg-base-100 rounded-xl"
   >
     <span
       v-for="(line, i) in visibleLines"
