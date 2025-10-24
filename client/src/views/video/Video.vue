@@ -48,7 +48,7 @@
     </div>
     <div
       v-if="uiStore.dictionarySidebarOpen"
-      class="absolute right-0 dictionary-container lg:relative w-[500px] flex flex-col"
+      class="absolute right-0 dictionary-container lg:relative lg:w-[500px] max-w-[500px] flex flex-col"
     >
       <div class="flex-1 overflow-y-auto">
         <Dictionary />
