@@ -1,7 +1,10 @@
 <template>
   <div class="flex relative">
     <div class="flex w-full">
-      <div class="yt-ts-container w-1/2 px-5 flex flex-col gap-3 items-center">
+      <div
+        class="yt-ts-container w-full px-5 flex flex-col gap-3 items-center"
+        :class="uiStore.transcriptSidebarOpen ? 'lg:w-1/2' : ''"
+      >
         <div ref="videoContainer" class="yt-player-container w-full">
           <youtube
             ref="youtubePlayer"
@@ -45,7 +48,7 @@
     </div>
     <div
       v-if="uiStore.dictionarySidebarOpen"
-      class="absolute right-0 dictionary-container lg:relative max-w-[350px] flex flex-col bg-base-200"
+      class="absolute right-0 dictionary-container lg:relative w-[500px] flex flex-col"
     >
       <div class="flex-1 overflow-y-auto">
         <Dictionary />

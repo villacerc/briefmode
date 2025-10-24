@@ -6,14 +6,14 @@
       </h1>
       <ul class="flex ml-auto space-x-2">
         <li
-          class="btn-circle"
+          class="btn-circle text-base-content/70"
           :class="[uiStore.transcriptSidebarOpen ? 'btn-toggled' : '']"
           @click="toggleTranscriptSidebar"
         >
           <i class="mui-icon text-2xl">subtitles</i>
         </li>
         <li
-          class="btn-circle"
+          class="btn-circle text-base-content/70"
           :class="[uiStore.dictionarySidebarOpen ? 'btn-toggled' : '']"
           @click="toggleDictionarySidebar"
         >
@@ -21,7 +21,7 @@
         </li>
         <li class="relative">
           <div
-            class="btn-circle"
+            class="btn-circle text-base-content/70"
             :class="[uiStore.moreMenuOpen ? 'btn-active' : '']"
             @click="toggleMoreMenu"
             v-click-outside="closeMenu"
