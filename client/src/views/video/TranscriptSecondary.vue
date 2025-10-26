@@ -16,36 +16,7 @@
             <p>0:01</p>
           </div>
           <div class="p-4 rounded-2xl bg-base-100 shadow-sm">
-            <Popup
-              v-for="(part, j) in snippet.snippet_words"
-              :key="j"
-              class="cursor-pointer hover:bg-info rounded-sm"
-            >
-              <p>
-                {{ removeAnnotations(part.romanized) }}
-              </p>
-              <p>
-                {{ part.text }}
-              </p>
-              <template #popup-content>
-                <div
-                  class="bg-info shadow-sm text-center rounded-lg p-3 pt-2 w-fit whitespace-nowrap"
-                >
-                  <ul>
-                    <li class="font-bold mb-1">
-                      {{
-                        part.part_of_speech.charAt(0).toUpperCase() +
-                        part.part_of_speech.slice(1) +
-                        ":"
-                      }}
-                    </li>
-                    <li v-for="(t, i) in part.translations" :key="i">
-                      {{ t.text }}
-                    </li>
-                  </ul>
-                </div>
-              </template>
-            </Popup>
+            <SnippetWords :snippet="snippet" />
           </div>
         </div>
         <div class="p-2">
@@ -60,7 +31,7 @@
 
 <script setup lang="ts">
 import type { TranslatedSnippet } from "../../types";
-import Popup from "../../components/Popup.vue";
+import SnippetWords from "../../components/SnippetWords.vue";
 
 const props = defineProps({
   activeIndex: {
@@ -69,18 +40,6 @@ const props = defineProps({
   },
   snippets: {
     type: Array as () => TranslatedSnippet[],
-    required: true,
-  },
-  languageUsesSpaces: {
-    type: Function,
-    required: true,
-  },
-  isAnnotation: {
-    type: Function,
-    required: true,
-  },
-  removeAnnotations: {
-    type: Function,
     required: true,
   },
 });

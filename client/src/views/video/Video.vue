@@ -22,13 +22,7 @@
         <div
           class="ts-primary-container h-full overflow-y-scroll overflow-x-hidden pb-3"
         >
-          <TranscriptPrimary
-            :activeIndex="activeIndex"
-            :isAnnotation="isAnnotation"
-            :removeAnnotations="removeAnnotations"
-            :snippets="snippets"
-            :languageUsesSpaces="languageUsesSpaces"
-          />
+          <TranscriptPrimary :activeIndex="activeIndex" :snippets="snippets" />
         </div>
       </div>
       <div
@@ -39,16 +33,13 @@
           <TranscriptSecondary
             :activeIndex="activeIndex"
             :snippets="snippets"
-            :languageUsesSpaces="languageUsesSpaces"
-            :isAnnotation="isAnnotation"
-            :removeAnnotations="removeAnnotations"
           />
         </div>
       </div>
     </div>
     <div
       v-if="uiStore.dictionarySidebarOpen"
-      class="absolute right-0 dictionary-container lg:relative lg:w-[500px] max-w-[500px] flex flex-col"
+      class="absolute right-0 dictionary-container lg:relative lg:w-[500px] max-w-[500px] bg-dictionary flex flex-col"
     >
       <div class="flex-1 overflow-y-auto">
         <Dictionary />
@@ -74,19 +65,9 @@ const player = ref<any>(null);
 const activeIndex = ref<number>(-1);
 const snippets = reactive<TranslatedSnippet[]>([]);
 const uiStore = useUiStore();
-const NO_SPACE_LANGUAGES = ["ja", "zh", "th", "lo", "km", "my", "bo", "mn"];
-const languageUsesSpaces = (langCode: string) => {
-  return !NO_SPACE_LANGUAGES.includes(langCode);
-};
 
 const youtube = YouTube;
 let animationFrame: number;
-
-const isAnnotation = (text: string) => /^\s*[\[\(].+[\]\)]\s*$/u.test(text);
-
-const removeAnnotations = (text: string) => {
-  return text.replace(/[\[\(].+?[\]\)]/gu, "").trim();
-};
 
 onMounted(async () => {
   try {

@@ -1,10 +1,10 @@
 <template>
   <div
-    v-if="visibleLines.length > 0"
+    v-if="visibleSnippets.length > 0"
     class="shadow-sm border border-slate-300 text-center relative group text-2xl px-5 py-3 bg-base-100 rounded-xl"
   >
     <span
-      v-for="(line, i) in visibleLines"
+      v-for="(line, i) in visibleSnippets"
       :key="i"
       class="inline-block rounded-sm"
       :class="[
@@ -15,58 +15,26 @@
         languageUsesSpaces(line.translation_language) ? 'mr-1' : '',
       ]"
     >
-      <Popup
-        v-for="(part, j) in line.snippet_words"
-        :key="j"
-        class="cursor-pointer hover:bg-info hover:text-base-content rounded-sm"
-      >
-        <p class="text-sm">
-          {{ removeAnnotations(part.romanized) }}
-        </p>
-        <p class="">
-          {{ part.text }}
-        </p>
-        <span v-if="languageUsesSpaces(line.transcript_language)">
-          {{ " " }}
-        </span>
-        <template #popup-content>
-          <div
-            class="bg-info text-center rounded-xl p-3 pt-2 w-fit whitespace-nowrap"
-          >
-            <ul>
-              <li class="font-bold mb-1">
-                {{
-                  part.part_of_speech.charAt(0).toUpperCase() +
-                  part.part_of_speech.slice(1) +
-                  ":"
-                }}
-              </li>
-              <li v-for="(t, i) in part.translations" :key="i">
-                {{ t.text }}
-              </li>
-            </ul>
-          </div>
-        </template>
-      </Popup>
+      <SnippetWords :snippet="line" />
     </span>
   </div>
   <div
-    v-if="visibleLines.length > 0"
+    v-if="visibleSnippets.length > 0"
     class="shadow-sm text-center bg-base-100 relative group text-2xl mt-2 px-5 py-3 rounded-xl"
   >
     <span
-      v-for="(line, i) in visibleLines"
+      v-for="(snippet, i) in visibleSnippets"
       :key="i"
       class="inline-block rounded-sm"
       :class="[
-        line.snippet_id === snippets[activeIndex].snippet_id &&
-        !isAnnotation(line.text)
+        snippet.snippet_id === snippets[activeIndex].snippet_id &&
+        !isAnnotation(snippet.text)
           ? 'bg-base-accent'
           : 'text-base-content/45',
-        languageUsesSpaces(line.translation_language) ? 'mr-1' : '',
+        languageUsesSpaces(snippet.translation_language) ? 'mr-1' : '',
       ]"
     >
-      {{ line.translation }}
+      {{ snippet.translation }}
     </span>
   </div>
 </template>
@@ -74,25 +42,14 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { TranslatedSnippet } from "../../types";
-import Popup from "../../components/Popup.vue";
+import SnippetWords from "../../components/SnippetWords.vue";
+import { languageUsesSpaces, isAnnotation } from "../../utils/helpers.js";
 
 const VISIBLE_LINES_SIZE = 3;
 
 const props = defineProps({
-  languageUsesSpaces: {
-    type: Function,
-    required: true,
-  },
   activeIndex: {
     type: Number,
-    required: true,
-  },
-  isAnnotation: {
-    type: Function,
-    required: true,
-  },
-  removeAnnotations: {
-    type: Function,
     required: true,
   },
   snippets: {
@@ -101,12 +58,12 @@ const props = defineProps({
   },
 });
 
-const visibleLines = computed<TranslatedSnippet[]>(() => {
+const visibleSnippets = computed<TranslatedSnippet[]>(() => {
   if (props.activeIndex === -1) return [];
 
   const snippet = props.snippets[props.activeIndex];
 
-  if (props.isAnnotation(snippet.text)) {
+  if (isAnnotation(snippet.text)) {
     // Show annotation by itself
     return [snippet];
   }
@@ -121,10 +78,10 @@ const visibleLines = computed<TranslatedSnippet[]>(() => {
   let group: TranslatedSnippet[] = [];
   for (let i = groupEnd - 1; i >= groupStart && i >= 0; i--) {
     const s = props.snippets[i];
-    if (props.isAnnotation(s.text) && i < props.activeIndex) {
+    if (isAnnotation(s.text) && i < props.activeIndex) {
       // stop when hitting annotation after normal text
       break;
-    } else if (props.isAnnotation(s.text)) {
+    } else if (isAnnotation(s.text)) {
       group = [];
       continue;
     }
