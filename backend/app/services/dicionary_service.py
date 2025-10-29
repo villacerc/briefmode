@@ -56,7 +56,13 @@ class DictionaryService:
                 "parts_of_speech": [{
                     "name": pos.name,
                     "definition": pos.description,
-                    "example": pos.example,
+                    "example_words": [{
+                        "text": w.text,
+                        "part_of_speech": w.part_of_speech_tag,
+                        "romanized": w.word.romanized,
+                        "translations": [{"text": t.text} for t in w.word.translations],
+                        "order_index": w.order_index
+                    } for w in pos.normalized_example.snippet_words],
                     "example_translation": pos.normalized_example.translations[0].text
                 } for pos in dictionary_pos]
             }

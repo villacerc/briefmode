@@ -16,7 +16,7 @@
             <p>0:01</p>
           </div>
           <div class="p-4 rounded-2xl bg-base-100 shadow-sm">
-            <SnippetWords :snippet="snippet" />
+            <SnippetWords :words="snippet.snippet_words" />
           </div>
         </div>
         <div class="p-2">
@@ -41,6 +41,10 @@ const props = defineProps({
   snippets: {
     type: Array as () => TranslatedSnippet[],
     required: true,
+  },
+  to_lang: {
+    type: String,
+    required: false,
   },
 });
 </script>

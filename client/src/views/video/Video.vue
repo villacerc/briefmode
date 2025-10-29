@@ -22,7 +22,11 @@
         <div
           class="ts-primary-container h-full overflow-y-scroll overflow-x-hidden pb-3"
         >
-          <TranscriptPrimary :activeIndex="activeIndex" :snippets="snippets" />
+          <TranscriptPrimary
+            :activeIndex="activeIndex"
+            :snippets="snippets"
+            :to_lang="to_lang"
+          />
         </div>
       </div>
       <div
@@ -33,16 +37,17 @@
           <TranscriptSecondary
             :activeIndex="activeIndex"
             :snippets="snippets"
+            :to_lang="to_lang"
           />
         </div>
       </div>
     </div>
     <div
       v-if="uiStore.dictionarySidebarOpen"
-      class="absolute right-0 dictionary-container lg:relative lg:w-[500px] max-w-[500px] bg-dictionary flex flex-col"
+      class="absolute right-0 dictionary-container lg:relative lg:w-[500px] max-w-[500px] bg-dictionary flex flex-col shadow-sm rounded-xl"
     >
       <div class="flex-1 overflow-y-auto">
-        <Dictionary />
+        <Dictionary :to_lang="to_lang" />
       </div>
     </div>
   </div>
@@ -65,6 +70,7 @@ const player = ref<any>(null);
 const activeIndex = ref<number>(-1);
 const snippets = reactive<TranslatedSnippet[]>([]);
 const uiStore = useUiStore();
+const to_lang = route.query.lang as string;
 
 const youtube = YouTube;
 let animationFrame: number;

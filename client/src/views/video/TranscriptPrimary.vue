@@ -4,18 +4,18 @@
     class="shadow-sm border border-slate-300 text-center relative group text-2xl px-5 py-3 bg-base-100 rounded-xl"
   >
     <span
-      v-for="(line, i) in visibleSnippets"
+      v-for="(snippet, i) in visibleSnippets"
       :key="i"
       class="inline-block rounded-sm"
       :class="[
-        line.snippet_id === snippets[activeIndex].snippet_id &&
-        !isAnnotation(line.text)
+        snippet.snippet_id === snippets[activeIndex].snippet_id &&
+        !isAnnotation(snippet.text)
           ? 'bg-accent'
           : 'text-base-content/45',
-        languageUsesSpaces(line.translation_language) ? 'mr-1' : '',
+        languageUsesSpaces(snippet.translation_language) ? 'mr-1' : '',
       ]"
     >
-      <SnippetWords :snippet="line" />
+      <SnippetWords :words="snippet.snippet_words" :to_lang="to_lang" />
     </span>
   </div>
   <div
@@ -55,6 +55,10 @@ const props = defineProps({
   snippets: {
     type: Array as () => TranslatedSnippet[],
     required: true,
+  },
+  to_lang: {
+    type: String,
+    required: false,
   },
 });
 

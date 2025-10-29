@@ -1,16 +1,16 @@
 <template>
   <Popup
-    v-for="(part, j) in snippet.snippet_words"
+    v-for="(word, j) in words"
     :key="j"
-    class="cursor-pointer hover:bg-info hover:text-base-content rounded-sm"
+    class="cursor-pointer hover:bg-info hover:text-base-content rounded-sm px-1"
   >
     <p class="text-sm">
-      {{ removeAnnotations(part.romanized) }}
+      {{ removeAnnotations(word.romanized) }}
     </p>
-    <p class="">
-      {{ part.text }}
+    <p>
+      {{ word.text }}
     </p>
-    <span v-if="languageUsesSpaces(snippet.transcript_language)">
+    <span v-if="languageUsesSpaces(to_lang)">
       {{ " " }}
     </span>
     <template #popup-content>
@@ -20,12 +20,12 @@
         <ul>
           <li class="font-bold mb-1">
             {{
-              part.part_of_speech.charAt(0).toUpperCase() +
-              part.part_of_speech.slice(1) +
+              word.part_of_speech.charAt(0).toUpperCase() +
+              word.part_of_speech.slice(1) +
               ":"
             }}
           </li>
-          <li v-for="(t, i) in part.translations" :key="i">
+          <li v-for="(t, i) in word.translations" :key="i">
             {{ t.text }}
           </li>
         </ul>
@@ -36,13 +36,17 @@
 
 <script setup lang="ts">
 import { defineProps } from "vue";
-import type { TranslatedSnippet } from "../types.js";
+import type { SnippetWord } from "../types.js";
 import Popup from "./Popup.vue";
 import { languageUsesSpaces, removeAnnotations } from "../utils/helpers.js";
 
 const props = defineProps({
-  snippet: {
-    type: Object as () => TranslatedSnippet,
+  words: {
+    type: Array as () => SnippetWord[],
+    required: true,
+  },
+  to_lang: {
+    type: String,
     required: true,
   },
 });

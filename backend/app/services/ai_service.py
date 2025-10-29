@@ -4,6 +4,7 @@ from openai import AsyncOpenAI
 import os
 import json
 import asyncio
+import random
 
 class AIService:
     def __init__(self):

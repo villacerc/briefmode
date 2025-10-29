@@ -1,3 +1,17 @@
+export type DictionaryWordEntry = {
+  parts_of_speech: PartsOfSpeech[];
+  romanized: string;
+  translations: string[];
+  word: string;
+};
+
+export type PartsOfSpeech = {
+  definition: string;
+  example_words: SnippetWord[];
+  example_translation: string;
+  name: string;
+}
+
 export type TranslatedSnippet = {
   snippet_id: number;
   text: string;
