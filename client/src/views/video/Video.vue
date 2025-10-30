@@ -33,6 +33,7 @@
           <TranscriptSecondary
             :activeIndex="activeIndex"
             :snippets="snippets"
+            @snippetClick="handleSnippetClick"
           />
         </div>
       </div>
@@ -87,6 +88,12 @@ onMounted(async () => {
 onUnmounted(() => {
   cancelAnimationFrame(animationFrame);
 });
+
+const handleSnippetClick = (snippet: TranslatedSnippet) => {
+  if (player.value) {
+    player.value.seekTo(snippet.start, true);
+  }
+};
 
 const tick = () => {
   if (player.value) {

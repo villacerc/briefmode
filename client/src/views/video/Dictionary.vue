@@ -3,7 +3,7 @@
     <h1 class="[font-family:'Inria',serif] text-2xl mb-1">Dictionary</h1>
     <div class="mb-4">
       <label
-        class="input p-2 flex items-center gap-2 rounded-md transition focus-within:border-neutral focus-within:outline-none"
+        class="input w-full p-2 flex items-center gap-2 rounded-md transition focus-within:border-neutral focus-within:outline-none"
       >
         <input
           type="search"

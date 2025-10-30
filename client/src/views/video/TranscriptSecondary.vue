@@ -10,10 +10,11 @@
             ? 'bg-accent text-base-content/100 border-slate-300'
             : 'bg-base-100 border-transparent',
         ]"
+        @click="emit('snippetClick', snippet)"
       >
         <div class="flex p-2 gap-4 items-center rounded-md">
           <div class="ml-2 px-2 rounded-2xl bg-warning h-fit">
-            <p>0:01</p>
+            <p>{{ formatTime(snippet.start) }}</p>
           </div>
           <div class="p-4 rounded-2xl bg-base-100 shadow-sm">
             <SnippetWords :words="snippet.snippet_words" />
@@ -33,6 +34,19 @@
 import type { TranslatedSnippet } from "../../types";
 import SnippetWords from "../../components/SnippetWords.vue";
 
+const formatTime = (seconds: number) => {
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+
+  if (hrs > 0) {
+    return `${hrs}:${mins.toString().padStart(2, "0")}:${secs
+      .toString()
+      .padStart(2, "0")}`;
+  }
+  return `${mins}:${secs.toString().padStart(2, "0")}`;
+};
+
 const props = defineProps({
   activeIndex: {
     type: Number,
@@ -43,4 +57,5 @@ const props = defineProps({
     required: true,
   },
 });
+const emit = defineEmits(["snippetClick"]);
 </script>

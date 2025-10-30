@@ -127,7 +127,7 @@ body {
 }
 
 .yt-player-container {
-  max-height: var(--max-player-height);
+  /* max-height: var(--max-player-height); */
   max-width: var(--max-player-width);
   min-width: var(--min-player-width); 
 }
