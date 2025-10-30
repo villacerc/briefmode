@@ -34,7 +34,7 @@ class DictionaryService:
                     target_lang
                 )
             else:
-                response["data"] = await self.get_phrase_dictionary(
+                response["data"] = await self.get_snippet_dictionary(
                     interpretation["normalized_text"],
                     source_lang,
                     target_lang
@@ -110,7 +110,7 @@ class DictionaryService:
         except Exception as e:
             raise RuntimeError(f"Error getting word dictionary for '{text}'. {e}")
 
-    async def get_phrase_dictionary(self, text: str, source_lang: Language, target_lang: Language):
+    async def get_snippet_dictionary(self, text: str, source_lang: Language, target_lang: Language):
         try:
             snippet = self.snippet_store.save_snippet(text, source_lang.id)
 
@@ -125,8 +125,8 @@ class DictionaryService:
             return {
                 "text": snippet.text,
                 "translation": snippet_translation.text,
-                "transcript_language": source_lang.code,
-                "translation_language": target_lang.code,
+                "source_language": source_lang.code,
+                "target_language": target_lang.code,
                 "snippet_words": [{
                     "text": w.text,
                     "part_of_speech": w.part_of_speech_tag,

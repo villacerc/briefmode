@@ -10,7 +10,7 @@
     <p>
       {{ word.text }}
     </p>
-    <span v-if="languageUsesSpaces(to_lang)">
+    <span v-if="languageUsesSpaces(settingsStore.to_lang)">
       {{ " " }}
     </span>
     <template #popup-content>
@@ -39,14 +39,12 @@ import { defineProps } from "vue";
 import type { SnippetWord } from "../types.js";
 import Popup from "./Popup.vue";
 import { languageUsesSpaces, removeAnnotations } from "../utils/helpers.js";
+import { useSettingsStore } from "../stores/settingsStore.ts";
+const settingsStore = useSettingsStore();
 
 const props = defineProps({
   words: {
     type: Array as () => SnippetWord[],
-    required: true,
-  },
-  to_lang: {
-    type: String,
     required: true,
   },
 });

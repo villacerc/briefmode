@@ -5,6 +5,14 @@ export type DictionaryWordEntry = {
   word: string;
 };
 
+export type DictionarySnippetEntry = {
+  text: string;
+  translation: string;
+  source_language: string;
+  target_language: string;
+  snippet_words: SnippetWord[];
+}
+
 export type PartsOfSpeech = {
   definition: string;
   example_words: SnippetWord[];

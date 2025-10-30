@@ -22,11 +22,7 @@
         <div
           class="ts-primary-container h-full overflow-y-scroll overflow-x-hidden pb-3"
         >
-          <TranscriptPrimary
-            :activeIndex="activeIndex"
-            :snippets="snippets"
-            :to_lang="to_lang"
-          />
+          <TranscriptPrimary :activeIndex="activeIndex" :snippets="snippets" />
         </div>
       </div>
       <div
@@ -37,7 +33,6 @@
           <TranscriptSecondary
             :activeIndex="activeIndex"
             :snippets="snippets"
-            :to_lang="to_lang"
           />
         </div>
       </div>
@@ -47,7 +42,7 @@
       class="absolute right-0 dictionary-container lg:relative lg:w-[500px] max-w-[500px] bg-dictionary flex flex-col shadow-sm rounded-xl"
     >
       <div class="flex-1 overflow-y-auto">
-        <Dictionary :to_lang="to_lang" />
+        <Dictionary />
       </div>
     </div>
   </div>
@@ -62,6 +57,7 @@ import TranscriptPrimary from "./TranscriptPrimary.vue";
 import TranscriptSecondary from "./TranscriptSecondary.vue";
 import Dictionary from "./Dictionary.vue";
 import { useUiStore } from "../../stores/uiStore.js";
+import { useSettingsStore } from "../../stores/settingsStore.ts";
 
 const route = useRoute();
 // A ref in Vue 3 is reactive (good for primitives). Whenever its .value changes,
@@ -70,12 +66,13 @@ const player = ref<any>(null);
 const activeIndex = ref<number>(-1);
 const snippets = reactive<TranslatedSnippet[]>([]);
 const uiStore = useUiStore();
-const to_lang = route.query.lang as string;
+const settingsStore = useSettingsStore();
 
 const youtube = YouTube;
 let animationFrame: number;
 
 onMounted(async () => {
+  settingsStore.setToLang(route.query.lang as string);
   try {
     await fetchVideoStream(
       route.params.id as string,

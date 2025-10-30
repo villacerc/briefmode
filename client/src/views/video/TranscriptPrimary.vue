@@ -56,10 +56,6 @@ const props = defineProps({
     type: Array as () => TranslatedSnippet[],
     required: true,
   },
-  to_lang: {
-    type: String,
-    required: false,
-  },
 });
 
 const visibleSnippets = computed<TranslatedSnippet[]>(() => {
