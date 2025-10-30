@@ -58,12 +58,21 @@ const renderPopup = async (event: MouseEvent) => {
   const targetRect = targetEl.getBoundingClientRect();
   const popupRect = popup.getBoundingClientRect();
   const gap = 10; // gap between target and popup content
+  let left = 0;
+
+  if (targetRect.left + popupRect.width / 2 + 10 > window.innerWidth) {
+    left = window.innerWidth - popupRect.width / 2 - 10;
+  } else if (targetRect.left - popupRect.width / 2 < 0) {
+    left = popupRect.width / 2 + 10;
+  } else {
+    left = targetRect.left + targetRect.width / 2;
+  }
 
   const above = targetRect.top > popupRect.height + gap;
   popupAbove.value = above;
 
   popupStyle.height = `${popupRect.height + gap}px`;
-  popupStyle.left = `${targetRect.left + targetRect.width / 2}px`;
+  popupStyle.left = `${left}px`;
   popupStyle.top = above
     ? `${targetRect.top - popupRect.height - gap}px`
     : `${targetRect.bottom}px`;

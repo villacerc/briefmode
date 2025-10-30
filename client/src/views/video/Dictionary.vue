@@ -18,7 +18,10 @@
 
     <!-- Dictionary Word Entry Section -->
     <div v-if="fetchingEntry === false && dictionaryWordEntry !== null">
-      <DictionaryWordContent :entry="dictionaryWordEntry" />
+      <DictionaryWordContent
+        :entry="dictionaryWordEntry"
+        :snippets="snippets"
+      />
     </div>
 
     <!-- Dictionary Snippet Entry Section -->
@@ -35,7 +38,11 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
-import type { DictionaryWordEntry, DictionarySnippetEntry } from "../../types";
+import type {
+  DictionaryWordEntry,
+  DictionarySnippetEntry,
+  TranslatedSnippet,
+} from "../../types";
 import DictionaryWordContent from "./DictionaryWordContent.vue";
 import SnippetWords from "../../components/SnippetWords.vue";
 
@@ -44,6 +51,13 @@ const dictionarySnippetEntry = ref<DictionarySnippetEntry | null>(null);
 const fetchingEntry = ref(false);
 const search = ref("");
 let inputTimeout: number = 0;
+
+const props = defineProps({
+  snippets: {
+    type: Array as () => TranslatedSnippet[],
+    required: true,
+  },
+});
 
 onMounted(async () => {
   try {
