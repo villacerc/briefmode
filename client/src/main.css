@@ -95,8 +95,24 @@ body {
   --space-above: 3rem;
   --space-below: 6rem;
   --max-player-height: calc(100vh - var(--space-above) - var(--space-below));
-  --max-player-width: calc(100vw - 40rem);
+  /* --max-player-width: calc(100vw - 40rem); */
+  --max-player-width: 736px;
   --min-player-width: 300px;
+}
+
+.aspect-ratio-box {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%; /* (9 / 16) * 100 = 56.25% */
+}
+
+
+.aspect-ratio-box-content {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
 }
 
 .btn-circle {
@@ -129,7 +145,6 @@ body {
 .yt-player-container {
   /* max-height: var(--max-player-height); */
   max-width: var(--max-player-width);
-  min-width: var(--min-player-width); 
 }
 
 .ts-primary-container {

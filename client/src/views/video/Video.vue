@@ -5,19 +5,23 @@
         class="yt-ts-container w-full px-5 flex flex-col gap-3 items-center"
         :class="uiStore.transcriptSidebarOpen ? 'lg:w-1/2' : ''"
       >
-        <div ref="videoContainer" class="yt-player-container w-full">
-          <youtube
-            ref="youtubePlayer"
-            :src="`https://www.youtube.com/watch?v=${route.params.id}`"
-            @ready="onReady"
-            width="100%"
-            height="100%"
-            :style="{
-              aspectRatio: '16 / 9',
-              borderRadius: '0.75rem',
-              overflow: 'hidden',
-            }"
-          />
+        <div class="yt-player-container w-full">
+          <div class="aspect-ratio-box">
+            <div class="aspect-ratio-box-content">
+              <youtube
+                ref="youtubePlayer"
+                :src="`https://www.youtube.com/watch?v=${route.params.id}`"
+                @ready="onReady"
+                width="100%"
+                height="100%"
+                :style="{
+                  height: '100%',
+                  borderRadius: '0.75rem',
+                  overflow: 'hidden',
+                }"
+              />
+            </div>
+          </div>
         </div>
         <div
           class="ts-primary-container h-full overflow-y-scroll overflow-x-hidden pb-3"
