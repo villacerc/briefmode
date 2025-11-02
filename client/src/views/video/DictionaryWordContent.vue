@@ -7,8 +7,7 @@
         <span class="capitalize">{{ entry.romanized }}</span>
       </h1>
       <div class="flex items-center mb-1">
-        <p class="mr-5">con - gru - ity</p>
-        <p class="mr-3">con - gru - ity</p>
+        <p class="mr-5">{{ entry.phonetic_spelling }}</p>
         <button class="btn-circle inline-block">
           <i class="mui-icon-fill text-2xl text-neutral">volume_up</i>
         </button>

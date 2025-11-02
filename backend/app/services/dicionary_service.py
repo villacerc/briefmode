@@ -52,6 +52,7 @@ class DictionaryService:
             return {
                 "word": word.text,
                 "romanized": word.romanized,
+                "phonetic_spelling": word.phonetic_spelling,
                 "translations": [t.text for t in translations],
                 "parts_of_speech": [{
                     "name": pos.name,

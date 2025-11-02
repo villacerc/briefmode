@@ -137,6 +137,7 @@ class Word(Base):
     language_id = Column(Integer, ForeignKey("languages.id"), nullable=False)
     text = Column(String(255), nullable=False)
     romanized = Column(String(255))
+    phonetic_spelling = Column(String(255))
 
     created_at = Column(DateTime, server_default=func.now())
 

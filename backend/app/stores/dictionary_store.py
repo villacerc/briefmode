@@ -23,9 +23,7 @@ class DictionaryStore:
 
     async def save_word_dictionary_entry(self, data: dict, source_lang: Language, target_lang: Language) -> Word:
         word = self.word_store.save_word(
-            word_text=data["word"],
-            romanized=data["romanized"],
-            translations=data["translations"],
+            data=data,
             source_lang_id=source_lang.id,
             target_lang_id=target_lang.id,
         )

@@ -1,6 +1,7 @@
 export type DictionaryWordEntry = {
   parts_of_speech: PartsOfSpeech[];
   romanized: string;
+  phonetic_spelling: string;
   translations: string[];
   word: string;
 };
