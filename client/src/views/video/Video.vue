@@ -3,7 +3,7 @@
     <div class="flex w-full">
       <div
         class="yt-ts-container w-full px-5 flex flex-col gap-3 items-center"
-        :class="uiStore.transcriptSidebarOpen ? 'lg:w-1/2' : ''"
+        :class="uiStore.transcriptPanelOpen ? 'lg:w-1/2' : ''"
       >
         <div class="yt-player-container w-full">
           <div class="aspect-ratio-box">
@@ -30,7 +30,7 @@
         </div>
       </div>
       <div
-        v-if="uiStore.transcriptSidebarOpen"
+        v-if="uiStore.transcriptPanelOpen"
         class="hidden lg:flex ts-secondary-container w-1/2 rounded-xl flex-col"
       >
         <div class="flex-1 overflow-y-scroll overflow-x-hidden">
@@ -43,7 +43,7 @@
       </div>
     </div>
     <div
-      v-if="uiStore.dictionarySidebarOpen"
+      v-if="uiStore.dictionaryPanelOpen"
       class="absolute right-0 dictionary-container lg:relative lg:w-[500px] max-w-[500px] bg-dictionary flex flex-col shadow-sm rounded-xl"
     >
       <div class="flex-1 overflow-y-auto">

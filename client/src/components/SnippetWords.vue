@@ -2,6 +2,7 @@
   <Popup
     v-for="(word, j) in words"
     :key="j"
+    @click.stop="wordClicked(word.text)"
     class="cursor-pointer hover:bg-info hover:text-base-content rounded-sm px-1"
   >
     <p class="text-sm">
@@ -10,7 +11,7 @@
     <p>
       {{ word.text }}
     </p>
-    <span v-if="languageUsesSpaces(settingsStore.to_lang)">
+    <span v-if="languageUsesSpaces(settingsStore.toLang)">
       {{ " " }}
     </span>
     <template #popup-content>
@@ -40,7 +41,16 @@ import type { SnippetWord } from "../types.js";
 import Popup from "./Popup.vue";
 import { languageUsesSpaces, removeAnnotations } from "../utils/helpers.js";
 import { useSettingsStore } from "../stores/settingsStore.ts";
+import { useEventStore } from "../stores/eventStore.ts";
+import { useUiStore } from "../stores/uiStore.ts";
 const settingsStore = useSettingsStore();
+const eventStore = useEventStore();
+const uiStore = useUiStore();
+
+const wordClicked = (wordText: string) => {
+  uiStore.showDictionaryPanel();
+  eventStore.lookupWord(wordText);
+};
 
 const props = defineProps({
   words: {

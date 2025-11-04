@@ -7,15 +7,15 @@
       <ul class="flex ml-auto space-x-2">
         <li
           class="btn-circle text-base-content/70"
-          :class="[uiStore.transcriptSidebarOpen ? 'btn-toggled' : '']"
-          @click="toggleTranscriptSidebar"
+          :class="[uiStore.transcriptPanelOpen ? 'btn-toggled' : '']"
+          @click="toggleTranscriptPanel"
         >
           <i class="mui-icon text-2xl">subtitles</i>
         </li>
         <li
           class="btn-circle text-base-content/70"
-          :class="[uiStore.dictionarySidebarOpen ? 'btn-toggled' : '']"
-          @click="toggleDictionarySidebar"
+          :class="[uiStore.dictionaryPanelOpen ? 'btn-toggled' : '']"
+          @click="toggleDictionaryPanel"
         >
           <i class="mui-icon text-2xl">translate</i>
         </li>
@@ -67,12 +67,12 @@
 import { useUiStore } from "../stores/uiStore";
 const uiStore = useUiStore();
 
-function toggleTranscriptSidebar() {
-  uiStore.toggleTranscriptSidebar();
+function toggleTranscriptPanel() {
+  uiStore.toggleTranscriptPanel();
 }
 
-function toggleDictionarySidebar() {
-  uiStore.toggleDictionarySidebar();
+function toggleDictionaryPanel() {
+  uiStore.toggleDictionaryPanel();
 }
 
 function toggleMoreMenu() {

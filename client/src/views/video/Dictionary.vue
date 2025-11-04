@@ -37,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { ref, watch } from "vue";
 import type {
   DictionaryWordEntry,
   DictionarySnippetEntry,
@@ -45,6 +45,9 @@ import type {
 } from "../../types";
 import DictionaryWordContent from "./DictionaryWordContent.vue";
 import SnippetWords from "../../components/SnippetWords.vue";
+import { useEventStore } from "../../stores/eventStore";
+
+const eventStore = useEventStore();
 
 const dictionaryWordEntry = ref<DictionaryWordEntry | null>(null);
 const dictionarySnippetEntry = ref<DictionarySnippetEntry | null>(null);
@@ -59,14 +62,13 @@ const props = defineProps({
   },
 });
 
-onMounted(async () => {
-  try {
-    // dictionaryWordEntry.value = await fetchDictionaryEntry("tohoku");
-  } catch (err) {
-    // TODO: redirect to error page
-    console.error(err);
+watch(
+  () => eventStore.wordToLookup,
+  (newWord) => {
+    search.value = newWord;
+    handleSearch();
   }
-});
+);
 
 const handleSearch = async () => {
   fetchingEntry.value = true;

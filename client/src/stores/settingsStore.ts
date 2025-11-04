@@ -2,11 +2,11 @@ import { defineStore } from 'pinia';
 
 export const useSettingsStore = defineStore('settings', {
   state: () => ({
-    to_lang: '',
+    toLang: '',
   }),
   actions: {
     setToLang(lang: string) {
-      this.to_lang = lang;
+      this.toLang = lang;
     },
   },
 });

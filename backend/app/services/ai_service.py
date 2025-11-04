@@ -56,7 +56,7 @@ class AIService:
 
                     Rules:
                         1. If the input is in a valid script or a recognizable romanized form, mark it as interpretable.
-                        2. Distinguish between a word (single token, no whitespace in space-based languages) and a phrase (multiple tokens or a valid construction in non-space languages).
+                        2. In languages that do not use spaces (Japanese, Chinese, Korean), treat a single contiguous block of characters as one word if it can stand alone semantically.
                         3. Return the ISO 639-1 language code for the detected language when interpretable.
                         4. If the input appears to be a partial word or misspelled form, provide the corrected or normalized version in the "normalized_text" field using the same canonical script of the detected language.
 

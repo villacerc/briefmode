@@ -17,7 +17,7 @@ def is_latin_script(text: str) -> bool:
     return True
 
 def sanitize_word(word: str) -> str:
-    # 1. Unicode normalize
+    # 1. Unicode normalize, makes visually identical text as also being binary identical.
     word = unicodedata.normalize("NFC", word)
 
     # 2. Casefold (Unicode-aware lowercase)
