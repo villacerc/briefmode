@@ -37,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { onMounted, ref, watch } from "vue";
 import type {
   DictionaryWordEntry,
   DictionarySnippetEntry,
@@ -60,6 +60,13 @@ const props = defineProps({
     type: Array as () => TranslatedSnippet[],
     required: true,
   },
+});
+
+onMounted(() => {
+  if (eventStore.wordToLookup) {
+    search.value = eventStore.wordToLookup;
+    handleSearch();
+  }
 });
 
 watch(

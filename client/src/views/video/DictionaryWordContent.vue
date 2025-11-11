@@ -37,15 +37,27 @@
       </div>
     </div>
 
-    <div class="mb-6" v-if="transcriptExamples.length > 0">
+    <div class="mb-6" v-if="snippetExamples.length > 0">
       <h1 class="mb-3">Transcript Examples</h1>
       <div class="border-t border-gray-400 w-full mb-3"></div>
-      <div class="mb-2" v-for="(example, idx) in transcriptExamples" :key="idx">
-        <p class="bg-base-100 p-3 rounded-lg">
-          <SnippetWords :words="example.snippet_words" />
-        </p>
+      <div class="mb-2" v-for="(snippet, idx) in snippetExamples" :key="idx">
+        <div
+          @click="eventStore.seekSnippet(snippet)"
+          class="cursor-pointer relative group"
+        >
+          <p class="bg-base-100 p-3 rounded-lg">
+            <SnippetWords :words="snippet.snippet_words" />
+          </p>
+          <div class="absolute -left-3.5 top-1/2 translate-y-[-50%]">
+            <i
+              class="mui-icon-fill text-2xl transition text-warning/70 group-hover:text-warning/100"
+              >play_circle</i
+            >
+          </div>
+        </div>
+
         <p class="px-5 py-2">
-          {{ example.translation }}
+          {{ snippet.translation }}
         </p>
       </div>
     </div>
@@ -56,8 +68,11 @@
 import type { DictionaryWordEntry, TranslatedSnippet } from "../../types";
 import SnippetWords from "../../components/SnippetWords.vue";
 import { onMounted, ref } from "vue";
+import { useEventStore } from "../../stores/eventStore.ts";
 
-const transcriptExamples = ref<TranslatedSnippet[]>([]);
+const eventStore = useEventStore();
+
+const snippetExamples = ref<TranslatedSnippet[]>([]);
 
 const props = defineProps({
   entry: {
@@ -71,11 +86,11 @@ const props = defineProps({
 });
 
 onMounted(() => {
-  findTranscriptExamples();
+  findSnippetExamples();
 });
 
-const findTranscriptExamples = () => {
-  transcriptExamples.value = props.snippets.filter((snippet) =>
+const findSnippetExamples = () => {
+  snippetExamples.value = props.snippets.filter((snippet) =>
     snippet.text.toLowerCase().includes(props.entry.word.toLowerCase())
   );
 };

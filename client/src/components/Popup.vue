@@ -34,7 +34,6 @@ const popupStyle = reactive({
   height: "auto",
   left: "0px",
   top: "0px",
-  transform: "translate(-50%, 0)",
 });
 const popupContentStyle = reactive({
   marginTop: "0px",
@@ -58,14 +57,12 @@ const renderPopup = async (event: MouseEvent) => {
   const targetRect = targetEl.getBoundingClientRect();
   const popupRect = popup.getBoundingClientRect();
   const gap = 10; // gap between target and popup content
-  let left = 0;
+  let left = targetRect.left + targetRect.width / 2 - popupRect.width / 2;
 
-  if (targetRect.left + popupRect.width / 2 + 10 > window.innerWidth) {
-    left = window.innerWidth - popupRect.width / 2 - 10;
-  } else if (targetRect.left - popupRect.width / 2 < 0) {
-    left = popupRect.width / 2 + 10;
-  } else {
-    left = targetRect.left + targetRect.width / 2;
+  if (left < gap) {
+    left = gap;
+  } else if (left + popupRect.width > window.innerWidth - gap) {
+    left = window.innerWidth - popupRect.width - gap;
   }
 
   const above = targetRect.top > popupRect.height + gap;

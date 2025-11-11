@@ -48,8 +48,8 @@ const eventStore = useEventStore();
 const uiStore = useUiStore();
 
 const wordClicked = (wordText: string) => {
-  uiStore.showDictionaryPanel();
   eventStore.lookupWord(wordText);
+  uiStore.showDictionaryPanel();
 };
 
 const props = defineProps({

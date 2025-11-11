@@ -37,7 +37,6 @@
           <TranscriptSecondary
             :activeIndex="activeIndex"
             :snippets="snippets"
-            @snippetClick="handleSnippetClick"
           />
         </div>
       </div>
@@ -55,7 +54,7 @@
 
 <script setup lang="ts">
 import { useRoute } from "vue-router";
-import { ref, reactive, onMounted, onUnmounted } from "vue";
+import { ref, reactive, onMounted, onUnmounted, watch } from "vue";
 import type { TranslatedSnippet } from "../../types";
 import YouTube from "vue3-youtube";
 import TranscriptPrimary from "./TranscriptPrimary.vue";
@@ -63,6 +62,7 @@ import TranscriptSecondary from "./TranscriptSecondary.vue";
 import Dictionary from "./Dictionary.vue";
 import { useUiStore } from "../../stores/uiStore.js";
 import { useSettingsStore } from "../../stores/settingsStore.ts";
+import { useEventStore } from "../../stores/eventStore.ts";
 
 const route = useRoute();
 // A ref in Vue 3 is reactive (good for primitives). Whenever its .value changes,
@@ -72,6 +72,7 @@ const activeIndex = ref<number>(-1);
 const snippets = reactive<TranslatedSnippet[]>([]);
 const uiStore = useUiStore();
 const settingsStore = useSettingsStore();
+const eventStore = useEventStore();
 
 const youtube = YouTube;
 let animationFrame: number;
@@ -93,12 +94,6 @@ onUnmounted(() => {
   cancelAnimationFrame(animationFrame);
 });
 
-const handleSnippetClick = (snippet: TranslatedSnippet) => {
-  if (player.value) {
-    player.value.seekTo(snippet.start, true);
-  }
-};
-
 const tick = () => {
   if (player.value) {
     const time = player.value.getCurrentTime();
@@ -115,6 +110,15 @@ const onReady = (event: any) => {
   player.value = event.target;
   tick();
 };
+
+watch(
+  () => eventStore.snippetToSeek,
+  (newSnippet: TranslatedSnippet | null) => {
+    if (player.value && newSnippet) {
+      player.value.seekTo(newSnippet.start, true);
+    }
+  }
+);
 
 const fetchVideoStream = async (source_id: string, lang: string) => {
   try {
