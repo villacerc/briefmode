@@ -4,7 +4,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 import uvicorn
 from concurrent.futures import ThreadPoolExecutor
-import os
 from dotenv import load_dotenv
 import json
 from sqlalchemy import select
@@ -12,7 +11,7 @@ from sqlalchemy.orm import Session
 from models import TranscriptSnippet, Language
 from database import get_db
 import logging
-from app.services import VideoService, TranslationService, DictionaryService
+from app.services import VideoService, TranslationService, DictionaryService, TTSService
 from app.stores import LanguageStore
 
 logging.basicConfig(level=logging.INFO)
@@ -46,6 +45,19 @@ async def root():
         "status": "healthy",
         "version": "1.0.0"
     }
+
+@app.get("/api/tts/{text}", summary="Text to Speech")
+async def text_to_speech(text: str):
+    try:
+        audioBase64 = await TTSService().get_tts_audio(text)
+        return {"audio": audioBase64}
+    except Exception as e:
+        message = f"Error occurred while attempting to convert text to speech. {e}"
+        logger.error(message)
+        raise HTTPException(
+            status_code=500,
+            detail=message
+        )
 
 @app.get("/api/dictionary/{text}", summary="Get Input Definition")
 async def get_input_definition(text: str, lang: str):
@@ -116,7 +128,6 @@ async def stream_translations(source_id: str, lang: str):
         raise RuntimeError(f"Error streaming translations for video (id: {source_id}). {e}")
     finally:
         db.close()
-
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)

@@ -14,4 +14,7 @@ __pycache__/
 # MacOS specific files
 .DS_Store
 
+# google cloud credentials
+briefmode-tts.json
+
 .env

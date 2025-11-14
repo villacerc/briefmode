@@ -25,5 +25,16 @@ export const formatSnippetTime = (seconds: number) => {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 };
 
+export const base64ToBlob = (base64: string, mime: string) => {
+  const byteChars = atob(base64);
+  const byteNumbers = new Array(byteChars.length);
+  for (let i = 0; i < byteChars.length; i++) {
+    byteNumbers[i] = byteChars.charCodeAt(i);
+  }
+  const byteArray = new Uint8Array(byteNumbers);
+  return new Blob([byteArray], { type: mime });
+};
+
+
 
 export const isAnnotation = (text: string) => /^\s*[\[\(].+[\]\)]\s*$/u.test(text);

@@ -8,7 +8,7 @@
       </h1>
       <div class="flex items-center mb-1">
         <p class="mr-5">{{ entry.phonetic_spelling }}</p>
-        <button class="btn-circle inline-block">
+        <button @click="playTTS" class="btn-circle inline-block">
           <i class="mui-icon-fill text-2xl text-neutral">volume_up</i>
         </button>
       </div>
@@ -69,6 +69,7 @@ import type { DictionaryWordEntry, TranslatedSnippet } from "../../types";
 import SnippetWords from "../../components/SnippetWords.vue";
 import { onMounted, ref } from "vue";
 import { useEventStore } from "../../stores/eventStore.ts";
+import { base64ToBlob } from "../../utils/helpers";
 
 const eventStore = useEventStore();
 
@@ -93,5 +94,31 @@ const findSnippetExamples = () => {
   snippetExamples.value = props.snippets.filter((snippet) =>
     snippet.text.toLowerCase().includes(props.entry.word.toLowerCase())
   );
+};
+
+const fetchTTS = async (text: string) => {
+  try {
+    const response = await fetch(`http://localhost:8000/api/tts/${text}`);
+    if (!response.ok) throw new Error("Network response was not ok");
+    const data = await response.json();
+    return data.audio;
+  } catch (error) {
+    console.error("Error fetching dictionary entry:", error);
+    throw error;
+  }
+};
+
+const playAudio = (audioBase64: string) => {
+  // Create a Blob URL from Base64
+  const audioBlob = base64ToBlob(audioBase64, "audio/mp3");
+  const audioUrl = URL.createObjectURL(audioBlob);
+
+  const audio = new Audio(audioUrl);
+  audio.play();
+};
+
+const playTTS = async () => {
+  const audioBase64 = await fetchTTS(props.entry.word);
+  playAudio(audioBase64);
 };
 </script>
