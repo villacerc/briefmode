@@ -53,6 +53,7 @@ class DictionaryService:
                 "word": word.text,
                 "romanized": word.romanized,
                 "phonetic_spelling": word.phonetic_spelling,
+                "source_language": word.language.code,
                 "translations": [t.text for t in translations],
                 "parts_of_speech": [{
                     "name": pos.name,

@@ -4,6 +4,7 @@ export type DictionaryWordEntry = {
   phonetic_spelling: string;
   translations: string[];
   word: string;
+  source_language: string;
 };
 
 export type DictionarySnippetEntry = {

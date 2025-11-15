@@ -96,9 +96,11 @@ const findSnippetExamples = () => {
   );
 };
 
-const fetchTTS = async (text: string) => {
+const fetchTTS = async (text: string, sourceLang: string) => {
   try {
-    const response = await fetch(`http://localhost:8000/api/tts/${text}`);
+    const response = await fetch(
+      `http://localhost:8000/api/tts/${text}?source_lang=${sourceLang}`
+    );
     if (!response.ok) throw new Error("Network response was not ok");
     const data = await response.json();
     return data.audio;
@@ -118,7 +120,10 @@ const playAudio = (audioBase64: string) => {
 };
 
 const playTTS = async () => {
-  const audioBase64 = await fetchTTS(props.entry.word);
+  const audioBase64 = await fetchTTS(
+    props.entry.word,
+    props.entry.source_language
+  );
   playAudio(audioBase64);
 };
 </script>

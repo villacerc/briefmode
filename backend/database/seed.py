@@ -2,6 +2,8 @@ from models import Language
 from database import get_db, create_tables, drop_tables
 import requests
 from sqlalchemy.exc import SQLAlchemyError
+import json
+from pathlib import Path
 
 def seed():
     drop_tables()
@@ -12,12 +14,14 @@ def seed():
 def seed_languages():
     db = next(get_db())
     try:
-        url = "https://gist.githubusercontent.com/josantonius/b455e315bc7f790d14b136d61d9ae469/raw/416def353b8849c427e9062a9db6445c62e77f75/language-codes.json"
-        response = requests.get(url)
-        languages_data = response.json()
+        # Get path of the JSON file relative to this script
+        file_path = Path(__file__).parent / "lang_map.json"
+        
+        with open(file_path, "r", encoding="utf-8") as f:
+            lang_map = json.load(f)
 
-        for code, name in languages_data.items():
-            language = Language(code=code, name=name)
+        for iso_code, data in lang_map.items():
+            language = Language(code=iso_code, name=data["name"], bcp47_code=data["bcp47"].lower())
             db.add(language)
 
         db.commit()

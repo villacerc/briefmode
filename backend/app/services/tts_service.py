@@ -8,7 +8,7 @@ class TTSService:
         self.credentials_path = os.getenv("GOOGLE_CREDENTIALS_PATH")
         self.google_tts_url = "https://texttospeech.googleapis.com/v1beta1/text:synthesize"
 
-    async def get_tts_audio(self, text: str) -> str:
+    async def get_tts_audio(self, text: str, lang_bcp47_code: str) -> str:
         try:
             access_token = self.get_google_access_token()
             
@@ -24,7 +24,7 @@ class TTSService:
                     "text": text
                 },
                 "voice": {
-                    "languageCode": "en-us",
+                    "languageCode": lang_bcp47_code,
                     "modelName": "gemini-2.5-flash-lite-preview-tts",
                     "name": "Achernar"
                 }
