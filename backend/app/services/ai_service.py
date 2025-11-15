@@ -141,10 +141,10 @@ class AIService:
         except Exception as e:
             raise RuntimeError(f"Error fetching AI dictionary pos for '{input}'. {e}")
 
-    async def fetch_ai_snippet_translation(self, snippet_text: str, translation_lang: Language):
+    async def fetch_ai_snippet_translation(self, snippet_text: str, target_lang: Language):
         try:
             prompt = f"""
-                    Translate the input below to {translation_lang.name}.
+                    Translate the input below to {target_lang.name}.
                     Rules:
                     1. Respond ONLY with valid JSON. Do NOT include explanations, comments, or extra text.
                     2. Capitalize the first word only if required by grammar.

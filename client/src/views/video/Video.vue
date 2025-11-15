@@ -78,12 +78,9 @@ const youtube = YouTube;
 let animationFrame: number;
 
 onMounted(async () => {
-  settingsStore.setToLang(route.query.lang as string);
+  settingsStore.setTargetLangCode(route.query.target_lang_code as string);
   try {
-    await fetchVideoStream(
-      route.params.id as string,
-      route.query.lang as string
-    );
+    await fetchVideoStream(route.params.id as string);
   } catch (err) {
     // TODO: redirect to error page
     console.error(err);
@@ -120,10 +117,10 @@ watch(
   }
 );
 
-const fetchVideoStream = async (source_id: string, lang: string) => {
+const fetchVideoStream = async (source_id: string) => {
   try {
     const res = await fetch(
-      `http://localhost:8000/api/video/${source_id}?lang=${lang}`
+      `http://localhost:8000/api/video/${source_id}?target_lang_code=${settingsStore.targetLangCode}`
     );
     // res.body is a ReadableStream, representing the body of the response.
     // getReader() returns a stream reader that allows you to read the data chunk by chunk.

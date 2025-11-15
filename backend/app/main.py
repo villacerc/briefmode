@@ -47,10 +47,10 @@ async def root():
     }
 
 @app.get("/api/tts/{text}", summary="Text to Speech")
-async def text_to_speech(text: str, source_lang: str):
+async def text_to_speech(text: str, source_lang_code: str):
     db = next(get_db())
     try:
-        source_lang = LanguageStore(db).get_by_code(source_lang)
+        source_lang = LanguageStore(db).get_by_code(source_lang_code)
         audioBase64 = await TTSService(db).get_tts_audio(text, source_lang)
         return {"audio": audioBase64}
     except Exception as e:
@@ -62,10 +62,10 @@ async def text_to_speech(text: str, source_lang: str):
         )
 
 @app.get("/api/dictionary/{text}", summary="Get Input Definition")
-async def get_input_definition(text: str, lang: str):
+async def get_input_definition(text: str, target_lang_code: str):
     db = next(get_db())
     try:
-        target_lang = LanguageStore(db).get_by_code(lang)
+        target_lang = LanguageStore(db).get_by_code(target_lang_code)
         dictionary_entry = await DictionaryService(db).get_dictionary_entry(text, target_lang)
         return dictionary_entry
     except Exception as e:
@@ -79,10 +79,10 @@ async def get_input_definition(text: str, lang: str):
         db.close()
 
 @app.get("/api/video/{source_id}", summary="Get Video Translation")
-def get_video(source_id: str, lang: str):
+def get_video(source_id: str, target_lang_code: str):
     try:
         return StreamingResponse(
-            stream_translations(source_id, lang),
+            stream_translations(source_id, target_lang_code),
             media_type="application/json"
         )
     except Exception as e:
@@ -110,11 +110,11 @@ def get_video_languages():
         db.close()
 
 # Stream translations for the transcript.
-async def stream_translations(source_id: str, lang: str):
+async def stream_translations(source_id: str, target_lang_code: str):
     db = next(get_db())
 
     try:
-        translation_lang = LanguageStore(db).get_by_code(lang)
+        target_lang = LanguageStore(db).get_by_code(target_lang_code)
         transcript_snippets = VideoService(db).fetch_transcript_snippets(source_id)
         transcript_snippets = transcript_snippets[:2]  # Limit to first 2 snippets for testing
 
@@ -122,7 +122,7 @@ async def stream_translations(source_id: str, lang: str):
         for i in range(0, len(transcript_snippets), chunk_size):
             transcript_chunk = transcript_snippets[i:i+chunk_size]
             try:
-                translated_chunk = await TranslationService(db).get_ts_translations(transcript_chunk, translation_lang)
+                translated_chunk = await TranslationService(db).get_ts_translations(transcript_chunk, target_lang)
                 yield json.dumps({"message": "Chunk translated", "data": translated_chunk}, ensure_ascii=False) + "\n"
             except Exception as e:
                 yield json.dumps({"message": "Failed to translate chunk", "chunk_index": i, "error": str(e)}, ensure_ascii=False) + "\n"

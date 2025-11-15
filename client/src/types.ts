@@ -4,14 +4,14 @@ export type DictionaryWordEntry = {
   phonetic_spelling: string;
   translations: string[];
   word: string;
-  source_language: string;
+  source_lang_code: string;
 };
 
 export type DictionarySnippetEntry = {
   text: string;
   translation: string;
-  source_language: string;
-  target_language: string;
+  source_lang_code: string;
+  target_lang_code: string;
   snippet_words: SnippetWord[];
 }
 
@@ -26,8 +26,8 @@ export type TranslatedSnippet = {
   snippet_id: number;
   text: string;
   translation: string
-  transcript_language: string;
-  translation_language: string;
+  source_lang_code: string;
+  target_lang_code: string;
   start: number;
   end: number;
   duration: number;

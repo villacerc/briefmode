@@ -30,14 +30,14 @@ class VideoStore:
             return video.transcript_snippets
         return None
 
-    def save_transcript_snippets(self, source_id: str, language: Language, transcript_data):
+    def save_transcript_snippets(self, source_id: str, source_lang: Language, transcript_data):
         video = Video(source_id=source_id)
         self.db.add(video)
         self.db.flush()
 
         transcript_snippets = []
         for i, item in enumerate(transcript_data.snippets):
-            snippet = self.snippet_store.save_snippet(item.text, language.id)
+            snippet = self.snippet_store.save_snippet(item.text, source_lang.id)
             
             ts_snippet = TranscriptSnippet(
                 video_id=video.id,

@@ -12,7 +12,7 @@
         !isAnnotation(snippet.text)
           ? 'bg-accent'
           : 'text-base-content/45',
-        languageUsesSpaces(snippet.translation_language) ? 'mr-1' : '',
+        languageUsesSpaces(snippet.target_lang_code) ? 'mr-1' : '',
       ]"
     >
       <SnippetWords :words="snippet.snippet_words" />
@@ -31,7 +31,7 @@
         !isAnnotation(snippet.text)
           ? 'bg-base-accent'
           : 'text-base-content/45',
-        languageUsesSpaces(snippet.translation_language) ? 'mr-1' : '',
+        languageUsesSpaces(snippet.target_lang_code) ? 'mr-1' : '',
       ]"
     >
       {{ snippet.translation }}

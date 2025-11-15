@@ -6,11 +6,11 @@ class SnippetStore:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_snippet_by_lang(self, text: str, lang_id: int) -> Snippet:
+    def get_snippet_by_lang(self, text: str, source_lang_id: int) -> Snippet:
         snippet_sanitized = sanitize_phrase(text)
         return self.db.query(Snippet).filter(
             Snippet.text == snippet_sanitized,
-            Snippet.language_id == lang_id
+            Snippet.language_id == source_lang_id
         ).first()
 
     def save_snippet(self, text: str, source_lang_id: int) -> Snippet:

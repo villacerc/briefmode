@@ -159,7 +159,7 @@ function goToVideo(lang) {
     router.push({
       name: "Video",
       params: { id: videoId },
-      query: { lang: lang_code },
+      query: { target_lang: lang_code },
     });
   }
 }

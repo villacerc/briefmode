@@ -53,7 +53,7 @@ class DictionaryService:
                 "word": word.text,
                 "romanized": word.romanized,
                 "phonetic_spelling": word.phonetic_spelling,
-                "source_language": word.language.code,
+                "source_lang_code": word.language.code,
                 "translations": [t.text for t in translations],
                 "parts_of_speech": [{
                     "name": pos.name,
@@ -127,8 +127,8 @@ class DictionaryService:
             return {
                 "text": snippet.text,
                 "translation": snippet_translation.text,
-                "source_language": source_lang.code,
-                "target_language": target_lang.code,
+                "source_lang_code": source_lang.code,
+                "target_lang_code": target_lang.code,
                 "snippet_words": [{
                     "text": w.text,
                     "part_of_speech": w.part_of_speech_tag,

@@ -7,11 +7,11 @@ class WordStore:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_word_by_lang(self, word_text: str, lang_id: int) -> Word:
+    def get_word_by_lang(self, word_text: str, source_lang_id: int) -> Word:
         word_sanitized = sanitize_word(word_text)
         return self.db.query(Word).filter(
             Word.text == word_sanitized,
-            Word.language_id == lang_id
+            Word.language_id == source_lang_id
         ).first()
 
     def save_snippet_words(self, words: list, snippet_type: SnippetType, snippet_id: int, source_lang_id: int, target_lang_id: int) -> list:

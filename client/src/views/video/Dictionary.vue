@@ -107,7 +107,7 @@ const handleSearch = async () => {
 const fetchDictionaryEntry = async (word: string) => {
   try {
     const response = await fetch(
-      `http://localhost:8000/api/dictionary/${word}?lang=en`
+      `http://localhost:8000/api/dictionary/${word}?target_lang_code=en`
     );
     if (!response.ok) throw new Error("Network response was not ok");
     const data = await response.json();
