@@ -51,7 +51,7 @@ async def text_to_speech(text: str, source_lang: str):
     db = next(get_db())
     try:
         source_lang = LanguageStore(db).get_by_code(source_lang)
-        audioBase64 = await TTSService().get_tts_audio(text, source_lang.bcp47_code)
+        audioBase64 = await TTSService(db).get_tts_audio(text, source_lang)
         return {"audio": audioBase64}
     except Exception as e:
         message = f"Error occurred while attempting to convert text to speech. {e}"

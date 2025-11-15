@@ -1,15 +1,23 @@
+from models import Language
+from app.stores import WordStore
 from google.oauth2 import service_account
 import google.auth.transport.requests
 import aiohttp
 import os
 
 class TTSService:
-    def __init__(self):
+    def __init__(self, db):
+        self.word_store = WordStore(db)
         self.credentials_path = os.getenv("GOOGLE_CREDENTIALS_PATH")
         self.google_tts_url = "https://texttospeech.googleapis.com/v1beta1/text:synthesize"
 
-    async def get_tts_audio(self, text: str, lang_bcp47_code: str) -> str:
+    async def get_tts_audio(self, text: str, lang: Language) -> str:
         try:
+            # check if TTS audio already exists in DB
+            word = self.word_store.get_word_by_lang(text, lang.id)
+            if word and word.tts_audio:
+                return word.tts_audio
+
             access_token = self.get_google_access_token()
             
             # prepare request payload
@@ -24,7 +32,7 @@ class TTSService:
                     "text": text
                 },
                 "voice": {
-                    "languageCode": lang_bcp47_code,
+                    "languageCode": lang.bcp47_code,
                     "modelName": "gemini-2.5-flash-lite-preview-tts",
                     "name": "Achernar"
                 }
@@ -40,7 +48,12 @@ class TTSService:
                 async with session.post(self.google_tts_url, json=payload, headers=headers) as resp:
                     data = await resp.json()
 
-            return data["audioContent"]
+            audio_content = data.get("audioContent")
+
+            # save TTS audio to DB
+            self.word_store.update_word(word, {"tts_audio": audio_content})
+
+            return audio_content
         except Exception as e:
             raise RuntimeError(f"Error occurred while attempting to fetch text to speech audio. {e}")
     

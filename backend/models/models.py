@@ -138,6 +138,7 @@ class Word(Base):
     text = Column(String(255), nullable=False)
     romanized = Column(String(255))
     phonetic_spelling = Column(String(255))
+    tts_audio = Column(Text)
 
     created_at = Column(DateTime, server_default=func.now())
 

@@ -65,3 +65,12 @@ class WordStore:
         self.db.refresh(new_word)
 
         return new_word
+    
+    def update_word(self, word: Word, data: dict):
+        for key, value in data.items():
+            # Only update attributes that actually exist on the Word model
+            if hasattr(word, key):
+                setattr(word, key, value)
+
+        self.db.commit()
+        self.db.refresh(word)
