@@ -33,7 +33,7 @@ class TranslationService:
 
     async def get_ts_translated_snippet(self, ts_snippet: TranscriptSnippet, target_lang: Language):
         if self.ts_snippet_has_translation_for_language(ts_snippet.snippet_id, target_lang.id):
-            video = self.video_store.get_video(ts_snippet.video_id)
+            video = self.video_store.get_video_by_id(ts_snippet.video_id)
             return self.get_normalized_ts_translated_snippet(ts_snippet, target_lang, video)
 
         # Call AI, parse JSON, etc.
@@ -42,7 +42,7 @@ class TranslationService:
         # Save to DB
         self.translation_store.save_ai_ts_snippet_translation(ts_snippet, target_lang, parsed_json)
 
-        video = self.video_store.get_video(ts_snippet.video_id)
+        video = self.video_store.get_video_by_id(ts_snippet.video_id)
         return self.get_normalized_ts_translated_snippet(ts_snippet, target_lang, video)
 
     def ts_snippet_has_translation_for_language(self, snippet_id: int, lang_id: int) -> bool:

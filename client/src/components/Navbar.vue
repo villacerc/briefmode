@@ -1,8 +1,11 @@
 <template>
   <nav>
     <div class="flex py-1 px-2">
-      <h1 class="font-medium text-lg self-center">
-        Easy Japanese 1 - Typical Japanese
+      <h1
+        v-if="settingsStore.videoInfo"
+        class="font-medium text-lg self-center"
+      >
+        {{ settingsStore.videoInfo.title }}
       </h1>
       <ul class="flex ml-auto space-x-2">
         <li
@@ -65,7 +68,9 @@
 
 <script setup>
 import { useUiStore } from "../stores/uiStore";
+import { useSettingsStore } from "../stores/settingsStore";
 const uiStore = useUiStore();
+const settingsStore = useSettingsStore();
 
 function toggleTranscriptPanel() {
   uiStore.toggleTranscriptPanel();

@@ -55,7 +55,7 @@
 <script setup lang="ts">
 import { useRoute } from "vue-router";
 import { ref, reactive, onMounted, onUnmounted, watch } from "vue";
-import type { TranslatedSnippet } from "../../types";
+import type { TranslatedSnippet, VideoInfo } from "../../types";
 import YouTube from "vue3-youtube";
 import TranscriptPrimary from "./TranscriptPrimary.vue";
 import TranscriptSecondary from "./TranscriptSecondary.vue";
@@ -78,9 +78,13 @@ const youtube = YouTube;
 let animationFrame: number;
 
 onMounted(async () => {
-  settingsStore.setTargetLangCode(route.query.target_lang_code as string);
   try {
-    await fetchVideoStream(route.params.id as string);
+    const videoInfo: VideoInfo = await fetchVideoInfo(
+      route.params.id as string
+    );
+    settingsStore.setVideo(videoInfo);
+    settingsStore.setTargetLangCode(route.query.target_lang_code as string);
+    await fetchVideoTranscript(videoInfo.source_id);
   } catch (err) {
     // TODO: redirect to error page
     console.error(err);
@@ -117,10 +121,23 @@ watch(
   }
 );
 
-const fetchVideoStream = async (source_id: string) => {
+const fetchVideoInfo = async (source_id: string) => {
+  try {
+    const res = await fetch(`http://localhost:8000/api/video/${source_id}`);
+    if (!res.ok) {
+      throw new Error("Failed to fetch video info.");
+    }
+    const data = await res.json();
+    return data;
+  } catch (error) {
+    throw new Error("Failed to fetch video info. " + error);
+  }
+};
+
+const fetchVideoTranscript = async (source_id: string) => {
   try {
     const res = await fetch(
-      `http://localhost:8000/api/video/${source_id}?target_lang_code=${settingsStore.targetLangCode}`
+      `http://localhost:8000/api/transcript/${source_id}?target_lang_code=${settingsStore.targetLangCode}`
     );
     // res.body is a ReadableStream, representing the body of the response.
     // getReader() returns a stream reader that allows you to read the data chunk by chunk.

@@ -12,7 +12,7 @@ from models import TranscriptSnippet, Language
 from database import get_db
 import logging
 from app.services import VideoService, TranslationService, DictionaryService, TTSService
-from app.stores import LanguageStore
+from app.stores import LanguageStore, VideoStore
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("uvicorn")
@@ -78,15 +78,34 @@ async def get_input_definition(text: str, target_lang_code: str):
     finally:
         db.close()
 
-@app.get("/api/video/{source_id}", summary="Get Video Translation")
-def get_video(source_id: str, target_lang_code: str):
+@app.get("/api/video/{source_id}", summary="Get Video")
+async def get_video(source_id: str):
+    db = next(get_db())
     try:
+        video_info = await VideoService(db).fetch_video_info(source_id)
+        return video_info
+    except Exception as e:
+        message = f"Error occurred while attempting to fetch video info (id: {source_id}). {e}"
+        logger.error(message)
+        raise HTTPException(
+            status_code=500,
+            detail=message
+        )
+
+@app.get("/api/transcript/{video_source_id}", summary="Get Video Transcript and Translations")
+async def get_transcript(video_source_id: str, target_lang_code: str):
+    db = next(get_db())
+    try:
+        video = VideoStore(db).get_video_by_source_id(video_source_id)
+        if not video:
+            raise RuntimeError(f"Video not found (id: {video_source_id})")
+
         return StreamingResponse(
-            stream_translations(source_id, target_lang_code),
+            stream_translations(video.source_id, target_lang_code),
             media_type="application/json"
         )
     except Exception as e:
-        message = f"Error occurred while attempting to translate video (id: {source_id}). {e}"
+        message = f"Error occurred while attempting to translate video (id: {video_source_id}). {e}"
         logger.error(message)
         raise HTTPException(
             status_code=500,
@@ -112,7 +131,6 @@ def get_video_languages():
 # Stream translations for the transcript.
 async def stream_translations(source_id: str, target_lang_code: str):
     db = next(get_db())
-
     try:
         target_lang = LanguageStore(db).get_by_code(target_lang_code)
         transcript_snippets = VideoService(db).fetch_transcript_snippets(source_id)

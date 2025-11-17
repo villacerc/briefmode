@@ -3,7 +3,6 @@ from sqlalchemy.orm import relationship
 from database import Base
 import enum
 
-
 class SnippetType(enum.Enum):
     TRANSCRIPT = "transcript"
     POS_EXAMPLE = "pos_example"
@@ -14,9 +13,11 @@ class Video(Base):
     id = Column(Integer, primary_key=True)
     source_id = Column(String(64), unique=True, nullable=False, index=True)
     title = Column(Text)
+    language_id = Column(Integer, ForeignKey("languages.id"), nullable=False)
 
     created_at = Column(DateTime, server_default=func.now())
 
+    language = relationship("Language", back_populates="videos")
     transcript_snippets = relationship(
         "TranscriptSnippet", 
         back_populates="video", 
@@ -185,3 +186,4 @@ class Language(Base):
     snippet_translations = relationship("SnippetTranslation", back_populates="language")
     words = relationship("Word", back_populates="language")
     translations = relationship("Translation", back_populates="language")
+    videos = relationship("Video", back_populates="language")

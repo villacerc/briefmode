@@ -7,6 +7,12 @@ export type DictionaryWordEntry = {
   source_lang_code: string;
 };
 
+export type VideoInfo = {
+  source_id: string;
+  title: string;
+  source_lang_code: string;
+}
+
 export type DictionarySnippetEntry = {
   text: string;
   translation: string;
