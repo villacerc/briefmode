@@ -1,5 +1,5 @@
-from models import DictionaryPOS, Snippet, Word, SnippetTranslation, Language
-from sqlalchemy.orm import Session
+from models import DictionaryPOS, Snippet, Word, SnippetTranslation, Language, SnippetWord
+from sqlalchemy.orm import Session, selectinload
 from .translation_store import TranslationStore
 from .word_store import WordStore
 from .snippet_store import SnippetStore
@@ -16,10 +16,23 @@ class DictionaryStore:
         self.ai_service = AIService()
 
     def get_word_dictionary_pos_by_lang(self, word_id: int, target_lang_id: int) -> List[DictionaryPOS]:
-        return self.db.query(DictionaryPOS).join(Snippet).join(Snippet.translations).filter(
-            DictionaryPOS.word_id == word_id,
-            SnippetTranslation.language_id == target_lang_id
-        ).all()
+        return (
+            self.db.query(DictionaryPOS)
+            .options(
+                selectinload(DictionaryPOS.normalized_example)
+                    .selectinload(Snippet.snippet_words)
+                    .selectinload(SnippetWord.word)
+                    .selectinload(Word.translations),
+                selectinload(DictionaryPOS.word),
+            )
+            .join(DictionaryPOS.normalized_example)
+            .join(Snippet.translations)
+            .filter(
+                DictionaryPOS.word_id == word_id,
+                SnippetTranslation.language_id == target_lang_id,
+            )
+            .all()
+        )
 
     async def save_word_dictionary_entry(self, data: dict, source_lang: Language, target_lang: Language) -> Word:
         word = self.word_store.save_word(
@@ -35,6 +48,7 @@ class DictionaryStore:
     async def save_word_pos_entry(self, word: Word, data: dict, source_lang: Language, target_lang: Language) -> Word:
         pos_data = data["parts_of_speech"]
 
+        # TODO: Run in parallel
         for pos in pos_data:
             snippet = self.snippet_store.save_snippet(pos["example"], source_lang.id)
             part_of_speech = DictionaryPOS(

@@ -14,7 +14,7 @@ class AIService:
 
     async def fetch_ai_data(self, prompt: str, validate_fetched_ai_json: callable) -> dict:
         parsed_json = None
-        max_retries = 3
+        max_retries = 5
         for attempt in range(max_retries):
             response = await self.retry_with_backoff(
                 self.async_openai_client.responses.create(
@@ -48,6 +48,7 @@ class AIService:
                 await asyncio.sleep(delay)
     
     async def fetch_ai_text_interpretation(self, text: str):
+        print(f"Fetching AI text interpretation for: {text}")
         try:
             prompt = f"""
                     You are a dictionary assistant.
@@ -75,42 +76,44 @@ class AIService:
             raise RuntimeError(f"Error fetching AI text interpretation for '{text}'. {e}")
 
     async def fetch_ai_dictionary_entry(self, text: str, source_lang: Language, target_lang: Language):
-            try:
-                prompt = f"""
-                        You are a dictionary assistant. 
-                        Given a word, a source language, and a target language, produce a JSON response according to the rules below.
+        print(f"Fetching AI dictionary entry for: {text} from {source_lang.name} to {target_lang.name}")
+        try:
+            prompt = f"""
+                    You are a dictionary assistant. 
+                    Given a word, a source language, and a target language, produce a JSON response according to the rules below.
 
-                        Rules
-                        1. Romanization output: romanized form of the input word in the Latin script.
-                        2. Translations: Provide up to 4 plausible translations into the target language.
-                        3. Parts of speech: Provide up to 4 unique parts of speech if available. Each must include:
-                            • Part of speech (in English)
-                            • Definition (in the target language)
-                            • Example sentence in the source language’s native script
-                        {{
-                        "word": "<original input word>",
-                        "romanized": "<romanized form of input word>",
-                        "phonetic_spelling": "<simplified pronunciation using familiar English letters and stress marks (e.g., huh-LOH, HEE-loh, sah-lahm), avoiding IPA symbols>"
-                        "translations": "<a list of at least three translation candidates if possible>",
-                        "parts_of_speech": [
-                                {{
-                                "part_of_speech": "<part of speech in english>",
-                                "definition": "<definition of the word in the **target** language>",
-                                "example": "<example sentence in the source language's script>",
-                                }}
-                            ]
-                        }}
+                    Rules
+                    1. Romanization output: romanized form of the input word in the Latin script.
+                    2. Translations: Provide up to 4 plausible translations into the target language.
+                    3. Parts of speech: Provide up to 4 unique parts of speech if available. Each must include:
+                        • Part of speech (in English)
+                        • Definition (in the target language)
+                        • Example sentence in the source language’s native script
+                    {{
+                    "word": "<original input word>",
+                    "romanized": "<romanized form of input word>",
+                    "phonetic_spelling": "<simplified pronunciation using familiar English letters and stress marks (e.g., huh-LOH, HEE-loh, sah-lahm), avoiding IPA symbols>"
+                    "translations": "<a list of at least three translation candidates if possible>",
+                    "parts_of_speech": [
+                            {{
+                            "part_of_speech": "<part of speech in english>",
+                            "definition": "<definition of the word in the **target** language>",
+                            "example": "<example sentence in the source language's script>",
+                            }}
+                        ]
+                    }}
 
-                        Input word: {text}
-                        Source language: {source_lang.name}
-                        Target language: {target_lang.name}
-                        """
-                parsed_json = await self.fetch_ai_data(prompt, self.json_service.validate_dictionary_entry_json)
-                return parsed_json
-            except Exception as e:
-                raise RuntimeError(f"Error fetching AI dictionary entry for '{input}'. {e}")
+                    Input word: {text}
+                    Source language: {source_lang.name}
+                    Target language: {target_lang.name}
+                    """
+            parsed_json = await self.fetch_ai_data(prompt, self.json_service.validate_dictionary_entry_json)
+            return parsed_json
+        except Exception as e:
+            raise RuntimeError(f"Error fetching AI dictionary entry for '{input}'. {e}")
 
     async def fetch_ai_dictionary_pos(self, text: str, source_lang: Language, target_lang: Language):
+        print(f"Fetching AI dictionary POS for: {text} from {source_lang.name} to {target_lang.name}")
         try:
             prompt = f"""
                     You are a dictionary assistant. 
@@ -142,6 +145,7 @@ class AIService:
             raise RuntimeError(f"Error fetching AI dictionary pos for '{input}'. {e}")
 
     async def fetch_ai_snippet_translation(self, snippet_text: str, target_lang: Language):
+        print(f"Fetching AI snippet translation for: {snippet_text} to {target_lang.name}")
         try:
             prompt = f"""
                     Translate the input below to {target_lang.name}.

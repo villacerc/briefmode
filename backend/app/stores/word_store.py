@@ -2,10 +2,12 @@ from sqlalchemy.orm import Session
 from sqlalchemy.dialects.postgresql import insert
 from models import Word, Translation, SnippetType, SnippetWord
 from app.utils.helpers import sanitize_word, is_latin_script
+from app.stores.snippet_store import SnippetStore
 
 class WordStore:
     def __init__(self, db: Session):
         self.db = db
+        self.snippet_store = SnippetStore(db)
 
     def get_word_by_lang(self, word_text: str, source_lang_id: int) -> Word:
         word_sanitized = sanitize_word(word_text)
@@ -15,6 +17,10 @@ class WordStore:
         ).first()
 
     def save_snippet_words(self, words: list, snippet_type: SnippetType, snippet_id: int, source_lang_id: int, target_lang_id: int) -> list:
+        snippet = self.snippet_store.get_snippet_by_id(snippet_id)
+        if snippet and snippet.snippet_words:
+            return snippet.snippet_words
+
         snippet_words = []
         for i, part in enumerate(words):
             word = self.save_word(part, source_lang_id, target_lang_id)

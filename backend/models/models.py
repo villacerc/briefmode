@@ -56,7 +56,7 @@ class Snippet(Base):
     created_at = Column(DateTime, server_default=func.now())
 
     language = relationship("Language", back_populates="snippets")
-    snippet_words = relationship("SnippetWord", back_populates="snippet", cascade="all, delete-orphan")
+    snippet_words = relationship("SnippetWord", back_populates="snippet", cascade="all, delete-orphan", lazy="selectin", order_by="SnippetWord.order_index")
     translations = relationship("SnippetTranslation", back_populates="snippet", cascade="all, delete-orphan")
     transcript_snippets = relationship("TranscriptSnippet", back_populates="snippet", cascade="all, delete-orphan")
     pos_example = relationship("DictionaryPOS", back_populates="normalized_example", uselist=False)

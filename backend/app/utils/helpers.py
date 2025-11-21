@@ -17,21 +17,21 @@ def is_latin_script(text: str) -> bool:
     return True
 
 def sanitize_word(word: str) -> str:
-    # 1. Unicode normalize, makes visually identical text as also being binary identical.
     word = unicodedata.normalize("NFC", word)
-
-    # 2. Casefold (Unicode-aware lowercase)
     word = word.casefold()
 
-    # 3. Remove ASCII punctuation except apostrophe
-    word = re.sub(r"[!¡¿\"#$%&()*+,\-./:;<=>?@[\\\]^_`{|}~]", "", word)
+    # Remove all punctuation and symbols, except apostrophe
+    word = "".join(
+        c for c in word
+        if (not unicodedata.category(c).startswith(("P", "S"))) or c == "'"
+    )
 
-    # 4. Collapse whitespace
+    # Collapse whitespace
     word = re.sub(r"\s+", " ", word).strip()
 
-    # 5. Strip accents
+    # Strip accents
     word = ''.join(
-        c for c in unicodedata.normalize('NFD', word)
+        c for c in unicodedata.normalize("NFD", word)
         if unicodedata.category(c) != 'Mn'
     )
 
@@ -55,3 +55,23 @@ def sanitize_phrase(phrase: str, lang: str = "en") -> str:
         phrase = sanitize_word(phrase)
 
     return phrase
+
+def is_single_word(text):
+    text = text.strip()
+
+    # Contains spaces → phrase
+    if " " in text:
+        return False
+
+    # Contains punctuation → phrase
+    if any(unicodedata.category(c).startswith("P") for c in text):
+        return False
+
+    # Letters + numbers + combining marks only
+    if not all(
+        unicodedata.category(c)[0] in ("L", "M", "N")
+        for c in text
+    ):
+        return False
+
+    return True

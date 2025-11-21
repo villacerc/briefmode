@@ -1,6 +1,7 @@
 from app.stores import LanguageStore, TranslationStore, DictionaryStore, WordStore, SnippetStore
 from models import Language, DictionaryPOS, Word
 from .ai_service import AIService
+from app.utils.helpers import is_single_word
 
 class DictionaryService:
     def __init__(self, db):
@@ -12,33 +13,60 @@ class DictionaryService:
         self.snippet_store = SnippetStore(db)
         self.ai_service = AIService()
 
-    async def get_dictionary_entry(self, text: str, target_lang: Language):
+    async def get_dictionary_entry(self, text: str, source_lang: Language, target_lang: Language):
         try:
-            interpretation = await self.ai_service.fetch_ai_text_interpretation(text)
+            is_word = is_single_word(text)
 
             response = {
-                "is_interpretable": interpretation["is_interpretable"],
-                "is_word": interpretation["is_word"],
+                "is_interpretable": False,
+                "is_word": is_word,
                 "data": None
             }
 
-            if not interpretation["is_interpretable"]:
-                return response
-
-            source_lang = self.language_store.get_by_code(interpretation["language_code"])
-
-            if interpretation["is_word"]:
+            if is_word:
+                word = self.word_store.get_word_by_lang(text, source_lang.id)
+                if word is not None:
+                    response["is_interpretable"] = True
+                    response["data"] = await self.get_word_dictionary(
+                        word.text,
+                        source_lang,
+                        target_lang
+                    )
+                    return response
+                
+                interpretation = await self.ai_service.fetch_ai_text_interpretation(text)
+                if not interpretation["is_interpretable"]:
+                    return response
+                
+                source_lang = self.language_store.get_by_code(interpretation["language_code"])
+                response["is_interpretable"] = True
                 response["data"] = await self.get_word_dictionary(
                     interpretation["normalized_text"],
                     source_lang,
                     target_lang
                 )
-            else:
+                return response
+            
+            snippet = self.snippet_store.get_snippet_by_lang(text, source_lang.id)
+            if snippet is not None:
+                response["is_interpretable"] = True
                 response["data"] = await self.get_snippet_dictionary(
-                    interpretation["normalized_text"],
+                    snippet.text,
                     source_lang,
                     target_lang
                 )
+            
+            interpretation = await self.ai_service.fetch_ai_text_interpretation(text)
+            if not interpretation["is_interpretable"]:
+                return response
+            
+            source_lang = self.language_store.get_by_code(interpretation["language_code"])
+            response["is_interpretable"] = True
+            response["data"] = await self.get_snippet_dictionary(
+                interpretation["normalized_text"],
+                source_lang,
+                target_lang
+            )
 
             return response
         except Exception as e:

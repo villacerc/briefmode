@@ -13,6 +13,9 @@ class SnippetStore:
             Snippet.language_id == source_lang_id
         ).first()
 
+    def get_snippet_by_id(self, snippet_id: int) -> Snippet:
+        return self.db.query(Snippet).filter(Snippet.id == snippet_id).first()
+
     def save_snippet(self, text: str, source_lang_id: int) -> Snippet:
         existing_snippet = self.get_snippet_by_lang(text, source_lang_id)
 

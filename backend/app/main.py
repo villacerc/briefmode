@@ -62,11 +62,12 @@ async def text_to_speech(text: str, source_lang_code: str):
         )
 
 @app.get("/api/dictionary/{text}", summary="Get Input Definition")
-async def get_input_definition(text: str, target_lang_code: str):
+async def get_input_definition(text: str, source_lang_code: str, target_lang_code: str):
     db = next(get_db())
     try:
+        source_lang = LanguageStore(db).get_by_code(source_lang_code)
         target_lang = LanguageStore(db).get_by_code(target_lang_code)
-        dictionary_entry = await DictionaryService(db).get_dictionary_entry(text, target_lang)
+        dictionary_entry = await DictionaryService(db).get_dictionary_entry(text, source_lang, target_lang)
         return dictionary_entry
     except Exception as e:
         message = f"Error occurred while attempting to fetch input definition for '{text}'. {e}"

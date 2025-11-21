@@ -46,8 +46,10 @@ import type {
 import DictionaryWordContent from "./DictionaryWordContent.vue";
 import SnippetWords from "../../components/SnippetWords.vue";
 import { useEventStore } from "../../stores/eventStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 
 const eventStore = useEventStore();
+const settingsStore = useSettingsStore();
 
 const dictionaryWordEntry = ref<DictionaryWordEntry | null>(null);
 const dictionarySnippetEntry = ref<DictionarySnippetEntry | null>(null);
@@ -107,7 +109,7 @@ const handleSearch = async () => {
 const fetchDictionaryEntry = async (word: string) => {
   try {
     const response = await fetch(
-      `http://localhost:8000/api/dictionary/${word}?target_lang_code=en`
+      `http://localhost:8000/api/dictionary/${word}?source_lang_code=${settingsStore.videoInfo?.source_lang_code}&target_lang_code=${settingsStore.targetLangCode}`
     );
     if (!response.ok) throw new Error("Network response was not ok");
     const data = await response.json();

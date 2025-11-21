@@ -24,6 +24,10 @@ class TranslationStore:
         ).first()
 
     def save_snippet_translation(self, text: str, snippet: Snippet, target_lang: Language) -> SnippetTranslation:
+        snippet_translation = self.get_snippet_translation_by_lang(snippet.id, target_lang.id)
+        if snippet_translation is not None:
+            return snippet_translation
+
         snippet_translation = SnippetTranslation(
             text=text,
             snippet_id=snippet.id,
