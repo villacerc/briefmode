@@ -40,12 +40,20 @@ class TranslationStore:
 
     def save_ai_snippet_translation(self, snippet: Snippet, target_lang: Language, data: dict) -> SnippetTranslation:
         snippet_translation = self.save_snippet_translation(data["translation"], snippet, target_lang)
-        self.word_store.save_snippet_words(data["word_parts"], SnippetType.POS_EXAMPLE, snippet.id, snippet.language_id, target_lang.id)
+
+        if(snippet.snippet_words is None or len(snippet.snippet_words) == 0):
+            self.word_store.save_snippet_words(data["word_parts"], SnippetType.POS_EXAMPLE, snippet.id, snippet.language_id, target_lang.id)
+        
+        self.db.refresh(snippet)
 
         return snippet_translation
 
     def save_ai_ts_snippet_translation(self, ts_snippet: TranscriptSnippet, target_lang: Language, data: dict) -> SnippetTranslation:
         snippet_translation = self.save_snippet_translation(data["translation"], ts_snippet.snippet, target_lang)
-        self.word_store.save_snippet_words(data["word_parts"], SnippetType.TRANSCRIPT, ts_snippet.id, ts_snippet.snippet.language_id, target_lang.id)
+
+        if(ts_snippet.snippet.snippet_words is None or len(ts_snippet.snippet.snippet_words) == 0):
+            self.word_store.save_snippet_words(data["word_parts"], SnippetType.TRANSCRIPT, ts_snippet.id, ts_snippet.snippet.language_id, target_lang.id)
+
+        self.db.refresh(ts_snippet)
 
         return snippet_translation

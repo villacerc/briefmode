@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session, selectinload
 from .translation_store import TranslationStore
 from .word_store import WordStore
 from .snippet_store import SnippetStore
-from app.utils.helpers import sanitize_phrase
 from app.services.ai_service import AIService
 from typing import List
 
@@ -50,7 +49,7 @@ class DictionaryStore:
 
         # TODO: Run in parallel
         for pos in pos_data:
-            snippet = self.snippet_store.save_snippet(pos["example"], source_lang.id)
+            snippet = self.snippet_store.save_snippet(pos["example"], source_lang)
             part_of_speech = DictionaryPOS(
                 snippet_id=snippet.id,
                 word_id=word.id,

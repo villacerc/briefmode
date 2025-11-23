@@ -1,30 +1,30 @@
 from sqlalchemy.orm import Session
-from models import Snippet
+from models import Snippet, Language
 from app.utils.helpers import sanitize_phrase
 
 class SnippetStore:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_snippet_by_lang(self, text: str, source_lang_id: int) -> Snippet:
-        snippet_sanitized = sanitize_phrase(text)
+    def get_snippet_by_lang(self, text: str, source_lang: Language) -> Snippet:
+        snippet_sanitized = sanitize_phrase(text, source_lang.code)
         return self.db.query(Snippet).filter(
             Snippet.text == snippet_sanitized,
-            Snippet.language_id == source_lang_id
+            Snippet.language_id == source_lang.id
         ).first()
 
     def get_snippet_by_id(self, snippet_id: int) -> Snippet:
         return self.db.query(Snippet).filter(Snippet.id == snippet_id).first()
 
-    def save_snippet(self, text: str, source_lang_id: int) -> Snippet:
-        existing_snippet = self.get_snippet_by_lang(text, source_lang_id)
+    def save_snippet(self, text: str, source_lang: Language) -> Snippet:
+        existing_snippet = self.get_snippet_by_lang(text, source_lang)
 
         if existing_snippet:
             return existing_snippet
 
         new_snippet = Snippet(
-            text=sanitize_phrase(text),
-            language_id=source_lang_id
+            text=sanitize_phrase(text, source_lang.code),
+            language_id=source_lang.id
         )
         self.db.add(new_snippet)
         self.db.commit()

@@ -17,10 +17,6 @@ class WordStore:
         ).first()
 
     def save_snippet_words(self, words: list, snippet_type: SnippetType, snippet_id: int, source_lang_id: int, target_lang_id: int) -> list:
-        snippet = self.snippet_store.get_snippet_by_id(snippet_id)
-        if snippet and snippet.snippet_words:
-            return snippet.snippet_words
-
         snippet_words = []
         for i, part in enumerate(words):
             word = self.save_word(part, source_lang_id, target_lang_id)

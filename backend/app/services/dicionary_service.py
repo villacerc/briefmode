@@ -47,7 +47,7 @@ class DictionaryService:
                 )
                 return response
             
-            snippet = self.snippet_store.get_snippet_by_lang(text, source_lang.id)
+            snippet = self.snippet_store.get_snippet_by_lang(text, source_lang)
             if snippet is not None:
                 response["is_interpretable"] = True
                 response["data"] = await self.get_snippet_dictionary(
@@ -142,13 +142,14 @@ class DictionaryService:
 
     async def get_snippet_dictionary(self, text: str, source_lang: Language, target_lang: Language):
         try:
-            snippet = self.snippet_store.save_snippet(text, source_lang.id)
+            snippet = self.snippet_store.save_snippet(text, source_lang)
 
             snippet_translation = self.translation_store.get_snippet_translation_by_lang(snippet.id, target_lang.id)
 
             if snippet_translation is None:
                 ai_data = await self.ai_service.fetch_ai_snippet_translation(snippet.text, target_lang)
                 snippet_translation = self.translation_store.save_ai_snippet_translation(snippet, target_lang, ai_data)
+                self.db.refresh(snippet)
 
             snippet_words = snippet.snippet_words
 

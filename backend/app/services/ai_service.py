@@ -60,12 +60,13 @@ class AIService:
                         2. In languages that do not use spaces (Japanese, Chinese, Korean), treat a single contiguous block of characters as one word if it can stand alone semantically.
                         3. Return the ISO 639-1 language code for the detected language when interpretable.
                         4. If the input appears to be a partial word or misspelled form, provide the corrected or normalized version in the "normalized_text" field using the same canonical script of the detected language.
+                        5. If rule #4 does not apply, return the original input unchanged in the "normalized_text" field.
 
                     {{
                         "is_interpretable": true | false,
                         "is_word": true | false,
                         "language_code": "xx" | null,
-                        "normalized_text": "string" | null
+                        "normalized_text": "string"
                     }}
 
                     Input: {text}

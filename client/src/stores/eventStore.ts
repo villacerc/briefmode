@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia'
-import { removePunctuation } from '../utils/helpers';
 import type { TranslatedSnippet } from '../types';
 
 export const useEventStore = defineStore('event', {
@@ -9,7 +8,7 @@ export const useEventStore = defineStore('event', {
   }),
   actions: {
     lookupWord(word: string) {
-      this.wordToLookup = removePunctuation(word).trim();
+      this.wordToLookup = word.trim();
     },
     seekSnippet(snippet: TranslatedSnippet) {
       this.snippetToSeek = snippet;

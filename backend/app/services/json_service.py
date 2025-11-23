@@ -92,8 +92,8 @@ class JSONService():
         if data["language_code"] is not None and not isinstance(data["language_code"], str):
             raise ValueError("'language_code' must be a string or null")
 
-        if data["normalized_text"] is not None and not isinstance(data["normalized_text"], str):
-            raise ValueError("'normalized_text' must be a string or null")
+        if data["normalized_text"] is None or not isinstance(data["normalized_text"], str):
+            raise ValueError("'normalized_text' must be a string")
 
     def validate_translation_json(self, data: dict) -> None:
         """
