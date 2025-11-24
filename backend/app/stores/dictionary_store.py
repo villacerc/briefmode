@@ -44,20 +44,35 @@ class DictionaryStore:
 
         return word
     
+    def save_dictionary_pos(self, word: Word, data: dict, source_lang: Language) -> DictionaryPOS:
+        existing_pos = self.db.query(DictionaryPOS).filter(
+            DictionaryPOS.word_id == word.id,
+            DictionaryPOS.name == data["part_of_speech"]
+        ).first()
+
+        if existing_pos:
+            return existing_pos
+
+        snippet = self.snippet_store.save_snippet(data["example"], source_lang)
+
+        part_of_speech = DictionaryPOS(
+            snippet_id=snippet.id,
+            word_id=word.id,
+            name=data["part_of_speech"],
+            description=data["definition"],
+            example=data["example"],
+        )
+        self.db.add(part_of_speech)
+
+        return part_of_speech
+    
     async def save_word_pos_entry(self, word: Word, data: dict, source_lang: Language, target_lang: Language) -> Word:
         pos_data = data["parts_of_speech"]
 
         # TODO: Run in parallel
         for pos in pos_data:
             snippet = self.snippet_store.save_snippet(pos["example"], source_lang)
-            part_of_speech = DictionaryPOS(
-                snippet_id=snippet.id,
-                word_id=word.id,
-                name=pos["part_of_speech"],
-                description=pos["definition"],
-                example=pos["example"],
-            )
-            self.db.add(part_of_speech)
+            self.save_dictionary_pos(word, pos, source_lang)
 
             # Fetch and save example translation
             translation_json = await self.ai_service.fetch_ai_snippet_translation(pos["example"], target_lang)

@@ -165,7 +165,7 @@ class AIService:
 
                     {{
                       "snippet_text": "<original input text>",
-                      "translation": "<full translated sentence here>",
+                      "translation": "<full translated sentence here otherwise original text if already in target language>",
                       "word_parts": [
                         {{
                           "word": "<original word with punctuation intact>",
