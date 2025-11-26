@@ -18,13 +18,13 @@ class DictionaryStore:
         return (
             self.db.query(DictionaryPOS)
             .options(
-                selectinload(DictionaryPOS.normalized_example)
+                selectinload(DictionaryPOS.example_snippet)
                     .selectinload(Snippet.snippet_words)
                     .selectinload(SnippetWord.word)
                     .selectinload(Word.translations),
                 selectinload(DictionaryPOS.word),
             )
-            .join(DictionaryPOS.normalized_example)
+            .join(DictionaryPOS.example_snippet)
             .join(Snippet.translations)
             .filter(
                 DictionaryPOS.word_id == word_id,
@@ -60,7 +60,7 @@ class DictionaryStore:
             word_id=word.id,
             name=data["part_of_speech"],
             description=data["definition"],
-            example=data["example"],
+            example_text=data["example"],
         )
         self.db.add(part_of_speech)
 

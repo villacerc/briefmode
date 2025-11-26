@@ -59,8 +59,8 @@ class Snippet(Base):
     snippet_words = relationship("SnippetWord", back_populates="snippet", cascade="all, delete-orphan", lazy="selectin", order_by="SnippetWord.order_index")
     translations = relationship("SnippetTranslation", back_populates="snippet", cascade="all, delete-orphan")
     transcript_snippets = relationship("TranscriptSnippet", back_populates="snippet", cascade="all, delete-orphan")
-    pos_example = relationship("DictionaryPOS", back_populates="normalized_example", uselist=False)
-
+    dictionary_pos = relationship("DictionaryPOS", back_populates="example_snippet", uselist=False)
+    
     __table_args__ = (
         Index("ix_snippet_text_lang", "text", "language_id"),
     )
@@ -90,11 +90,11 @@ class DictionaryPOS(Base):
     snippet_id = Column(Integer, ForeignKey("snippets.id", ondelete="CASCADE"), nullable=False)
     name = Column(String(50), nullable=False)
     description = Column(Text)
-    example = Column(Text, nullable=False)
+    example_text = Column(Text, nullable=False)
 
     created_at = Column(DateTime, server_default=func.now())
-
-    normalized_example = relationship("Snippet", back_populates="pos_example", uselist=False)
+    
+    example_snippet = relationship("Snippet", back_populates="dictionary_pos", uselist=False)
     word = relationship("Word", back_populates="pos_examples")
 
     __table_args__ = (

@@ -95,6 +95,12 @@ class JSONService():
         if data["normalized_text"] is None or not isinstance(data["normalized_text"], str):
             raise ValueError("'normalized_text' must be a string")
 
+        if data["is_interpretable"]:
+            if data["language_code"] is None:
+                raise ValueError("'language_code' cannot be null when 'is_interpretable' is true")
+            if not data["normalized_text"].strip():
+                raise ValueError("'normalized_text' cannot be empty when 'is_interpretable' is true")
+
     def validate_translation_json(self, data: dict) -> None:
         """
         Validates the structure and content of the data translation JSON.

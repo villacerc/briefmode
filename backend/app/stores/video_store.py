@@ -25,8 +25,7 @@ class VideoStore:
         video = self.db.execute(
             select(Video).options(
                 joinedload(Video.transcript_snippets)
-                .joinedload(TranscriptSnippet.snippet)
-                .joinedload(Snippet.snippet_words)
+                .joinedload(TranscriptSnippet.snippet_words)
                 .joinedload(SnippetWord.word)
                 .joinedload(Word.translations),
                 joinedload(Video.transcript_snippets)

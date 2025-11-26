@@ -93,8 +93,8 @@ class DictionaryService:
                         "romanized": w.word.romanized,
                         "translations": [{"text": t.text} for t in w.word.translations],
                         "order_index": w.order_index
-                    } for w in pos.normalized_example.snippet_words],
-                    "example_translation": pos.normalized_example.translations[0].text
+                    } for w in pos.example_snippet.snippet_words],
+                    "example_translation": pos.example_snippet.translations[0].text
                 } for pos in dictionary_pos]
             }
 
