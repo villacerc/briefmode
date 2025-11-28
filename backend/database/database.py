@@ -1,22 +1,23 @@
 from typing import Any, Generator
 
 from sqlalchemy.orm import Session, DeclarativeBase
-from sqlalchemy import create_engine, select
+from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from typing import AsyncGenerator
 
 # TODO: refactor for other environments
 # Database setup
-DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/briefmode"
-engine = create_engine(
+DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/briefmode"
+engine = create_async_engine(
     DATABASE_URL,
     pool_size=10,        # number of persistent connections
     max_overflow=20,     # how many "extra" connections beyond pool_size
     pool_timeout=30,     # seconds to wait before giving up
     pool_pre_ping=True   # makes dead connections auto-reconnect
 )
-SessionLocal = sessionmaker(
-    autocommit=False, 
-    autoflush=False, 
+AsyncSessionLocal  = sessionmaker(
+    class_=AsyncSession,
     expire_on_commit=False, 
     bind=engine
 )
@@ -24,21 +25,14 @@ SessionLocal = sessionmaker(
 class Base(DeclarativeBase):
     pass
 
-def get_db() -> Generator[Session, Any, None]:
-    """
-    Provides a database session to path operations.
-    """
-    db = SessionLocal()
-    try:
-        yield db
-    except Exception as e:
-        print(f"Database connection error: {e}")
-        raise
-    finally:
-        db.close()
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    async with AsyncSessionLocal() as session:
+        yield session
 
-def create_tables():
-    Base.metadata.create_all(bind=engine)
+async def create_tables():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
-def drop_tables():
-    Base.metadata.drop_all(bind=engine)
+async def drop_tables():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
