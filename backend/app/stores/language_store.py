@@ -1,4 +1,5 @@
 from models import Language
+from sqlalchemy import select
 
 class LanguageStore:
     def __init__(self, db):
@@ -7,9 +8,10 @@ class LanguageStore:
     def language_exists(self, code: str) -> bool:
         return self.db.query(Language).filter(Language.code == code).first() is not None
 
-    def get_by_code(self, code: str):
+    async def get_by_code(self, code: str):
         try:
-            language = self.db.query(Language).filter(Language.code == code).first()
+            result = await self.db.execute(select(Language).where(Language.code == code))
+            language = result.scalars().first()
             if not language:
                 raise ValueError(f"Language with code '{code}' not found.")
             return language

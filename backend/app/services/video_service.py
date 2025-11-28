@@ -14,18 +14,18 @@ class VideoService:
     
     async def fetch_video_info(self, source_id: str) -> Video:
         try:
-            video = self.video_store.get_video_by_source_id(source_id)
-            if video:
+            video = await self.video_store.get_video_by_source_id(source_id)
+            if video:          
                 return self.get_normalized_video_info(video)
-
-            params = {
+    
+            ytt_api_params = {
                 "part": "snippet,contentDetails",
                 "id": source_id,
                 "key": self.google_api_key
             }
 
             async with httpx.AsyncClient() as client:
-                response = await client.get(self.ytt_api_url, params=params)
+                response = await client.get(self.ytt_api_url, params=ytt_api_params)
             
             if response.status_code != 200:
                 raise RuntimeError("YouTube API error")
@@ -36,14 +36,15 @@ class VideoService:
                 raise RuntimeError("Video not found")
             
             language_code = data["items"][0]["snippet"].get("defaultAudioLanguage", "en")
-            language = self.language_store.get_by_code(language_code)
+            language = await self.language_store.get_by_code(language_code)
             title = data["items"][0]["snippet"]["title"]
 
-            video = self.video_store.save_video({
+            video_id = await self.video_store.save_video({
                 "source_id": source_id,
                 "title": title,
                 "language_id": language.id
             })
+            video = await self.video_store.get_video_by_id(video_id)
 
             return self.get_normalized_video_info(video)
         except Exception as e:

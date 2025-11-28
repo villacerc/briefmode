@@ -81,17 +81,17 @@ async def get_input_definition(text: str, source_lang_code: str, target_lang_cod
 
 @app.get("/api/video/{source_id}", summary="Get Video")
 async def get_video(source_id: str):
-    db = next(get_db())
-    try:
-        video_info = await VideoService(db).fetch_video_info(source_id)
-        return video_info
-    except Exception as e:
-        message = f"Error occurred while attempting to fetch video info (id: {source_id}). {e}"
-        logger.error(message)
-        raise HTTPException(
-            status_code=500,
-            detail=message
-        )
+    async with AsyncSessionLocal() as db:
+        try:
+            video_info = await VideoService(db).fetch_video_info(source_id)
+            return video_info
+        except Exception as e:
+            message = f"Error occurred while attempting to fetch video info (id: {source_id}). {e}"
+            logger.error(message)
+            raise HTTPException(
+                status_code=500,
+                detail=message
+            )
 
 @app.get("/api/transcript/{video_source_id}", summary="Get Video Transcript and Translations")
 async def get_transcript(video_source_id: str, target_lang_code: str):

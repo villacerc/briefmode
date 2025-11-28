@@ -1,5 +1,5 @@
 from models import Language
-from database import AsyncSessionLocal, get_db, create_tables, drop_tables
+from database import AsyncSessionLocal, create_tables, drop_tables
 import requests
 from sqlalchemy.exc import SQLAlchemyError
 import json

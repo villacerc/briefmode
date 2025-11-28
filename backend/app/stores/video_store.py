@@ -8,18 +8,19 @@ class VideoStore:
         self.db = db
         self.snippet_store = SnippetStore(db)
 
-    def get_video_by_id(self, video_id: int):
-        return self.db.query(Video).filter(Video.id == video_id).first()
+    async def get_video_by_id(self, video_id: int):
+        result = await self.db.execute(select(Video).options(selectinload(Video.language)).where(Video.id == video_id))
+        return result.scalars().first()
     
-    def get_video_by_source_id(self, source_id: str):
-        return self.db.query(Video).filter(Video.source_id == source_id).first()
+    async def get_video_by_source_id(self, source_id: str):
+        result = await self.db.execute(select(Video).options(selectinload(Video.language)).where(Video.source_id == source_id))
+        return result.scalars().first()
 
-    def save_video(self, data: dict):
+    async def save_video(self, data: dict):
         video = Video(source_id=data["source_id"], title=data["title"], language_id=data["language_id"])
         self.db.add(video)
-        self.db.commit()
-        self.db.refresh(video)
-        return video
+        await self.db.commit()
+        return video.id
 
     def get_transcript_snippets(self, source_id: str):
         video = self.db.execute(
