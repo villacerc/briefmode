@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from models import Word, Translation, SnippetType, SnippetWord
 from app.utils.helpers import sanitize_word, is_latin_script
@@ -9,17 +10,19 @@ class WordStore:
         self.db = db
         self.snippet_store = SnippetStore(db)
 
-    def get_word_by_lang(self, word_text: str, source_lang_id: int) -> Word:
+    async def get_word_by_lang(self, word_text: str, source_lang_id: int) -> Word:
         word_sanitized = sanitize_word(word_text)
-        return self.db.query(Word).filter(
-            Word.text == word_sanitized,
-            Word.language_id == source_lang_id
-        ).first()
+        result = await self.db.execute(
+            select(Word).where(
+                Word.text == word_sanitized,
+                Word.language_id == source_lang_id
+            )
+        )
+        return result.scalars().first()
 
-    def save_snippet_words(self, words: list, snippet_type: SnippetType, snippet_id: int, source_lang_id: int, target_lang_id: int) -> list:
-        snippet_words = []
+    async def save_snippet_words(self, words: list, snippet_type: SnippetType, snippet_id: int, source_lang_id: int, target_lang_id: int):
         for i, part in enumerate(words):
-            word = self.save_word(part, source_lang_id, target_lang_id)
+            word_id = await self.save_word(part, source_lang_id, target_lang_id)
             
             # separate logic below
             # if snippet_type == SnippetType.TRANSCRIPT:
@@ -35,19 +38,16 @@ class WordStore:
             snippet_word = SnippetWord(
                 text=part["word"].strip(),
                 part_of_speech_tag=part["part_of_speech"],
-                word_id=word.id,
+                word_id=word_id,
                 snippet_id=snippet_id if snippet_type == SnippetType.POS_EXAMPLE else None,
                 transcript_snippet_id=snippet_id if snippet_type == SnippetType.TRANSCRIPT else None,
                 order_index=i
             )
             self.db.add(snippet_word)
-            self.db.flush()
-            snippet_words.append(snippet_word)
 
-        self.db.commit()
-        return snippet_words
+        await self.db.commit()
 
-    def save_word_translations(self, word: Word, translations: list, target_lang_id: int):
+    async def save_word_translations(self, word: Word, translations: list, target_lang_id: int):
         for text in translations:
             stmt = insert(Translation).values(
                 text=text,
@@ -56,13 +56,12 @@ class WordStore:
             ).on_conflict_do_nothing(
                 index_elements=["word_id", "language_id", "text"]
             )
-            self.db.execute(stmt)
+            await self.db.execute(stmt)
 
-        self.db.commit()
-        self.db.refresh(word)
+        await self.db.commit()
 
-    def save_word(self, data: object, source_lang_id: int, target_lang_id: int) -> Word:
-        word = self.get_word_by_lang(data["word"], source_lang_id)
+    async def save_word(self, data: object, source_lang_id: int, target_lang_id: int) -> Word:
+        word = await self.get_word_by_lang(data["word"], source_lang_id)
 
         if word is None:
             word_sanitized = sanitize_word(data["word"])
@@ -74,20 +73,22 @@ class WordStore:
                 language_id=source_lang_id
             )
             self.db.add(word)
-            self.db.commit()
-            self.db.refresh(word)
-            self.save_word_translations(word, data["translations"], target_lang_id)
-            return word
+            await self.db.commit()
+            await self.save_word_translations(word, data["translations"], target_lang_id)
+            return word.id
             
-        existing_translation = self.db.query(Translation).filter(
-            Translation.word_id == word.id,
-            Translation.language_id == target_lang_id
-        ).first()
+        existing_translation_result = await self.db.execute(
+            select(Translation).filter(
+                Translation.word_id == word.id,
+                Translation.language_id == target_lang_id
+            )
+        )
+        existing_translation = existing_translation_result.scalars().first()
 
         if existing_translation is None:
-            self.save_word_translations(word, data["translations"], target_lang_id)
+            await self.save_word_translations(word, data["translations"], target_lang_id)
     
-        return None
+        return word.id
     
     def update_word(self, word: Word, data: dict):
         for key, value in data.items():

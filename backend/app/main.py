@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List
+from typing import List, Dict
 import uvicorn
 from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
@@ -13,6 +13,7 @@ from database import AsyncSessionLocal
 import logging
 from app.services import VideoService, TranslationService, DictionaryService, TTSService
 from app.stores import LanguageStore, VideoStore
+import asyncio
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("uvicorn")
@@ -50,7 +51,7 @@ async def root():
 async def text_to_speech(text: str, source_lang_code: str):
     db = next(get_db())
     try:
-        source_lang = LanguageStore(db).get_by_code(source_lang_code)
+        source_lang = LanguageStore(db).get_lang_by_code(source_lang_code)
         audioBase64 = await TTSService(db).get_tts_audio(text, source_lang)
         return {"audio": audioBase64}
     except Exception as e:
@@ -65,8 +66,8 @@ async def text_to_speech(text: str, source_lang_code: str):
 async def get_input_definition(text: str, source_lang_code: str, target_lang_code: str):
     db = next(get_db())
     try:
-        source_lang = LanguageStore(db).get_by_code(source_lang_code)
-        target_lang = LanguageStore(db).get_by_code(target_lang_code)
+        source_lang = LanguageStore(db).get_lang_by_code(source_lang_code)
+        target_lang = LanguageStore(db).get_lang_by_code(target_lang_code)
         dictionary_entry = await DictionaryService(db).get_dictionary_entry(text, source_lang, target_lang)
         return dictionary_entry
     except Exception as e:
@@ -95,11 +96,11 @@ async def get_video(source_id: str):
 
 @app.get("/api/transcript/{video_source_id}", summary="Get Video Transcript and Translations")
 async def get_transcript(video_source_id: str, target_lang_code: str):
-    db = next(get_db())
     try:
-        video = VideoStore(db).get_video_by_source_id(video_source_id)
-        if not video:
-            raise RuntimeError(f"Video not found (id: {video_source_id})")
+        async with AsyncSessionLocal() as db:
+            video = await VideoStore(db).get_video_by_source_id(video_source_id)
+            if not video:
+                raise RuntimeError(f"Video not found (id: {video_source_id})")
 
         return StreamingResponse(
             stream_translations(video.source_id, target_lang_code),
@@ -127,24 +128,40 @@ async def get_video_languages():
 
 # Stream translations for the transcript.
 async def stream_translations(source_id: str, target_lang_code: str):
-    db = next(get_db())
     try:
-        target_lang = LanguageStore(db).get_by_code(target_lang_code)
-        transcript_snippets = VideoService(db).fetch_transcript_snippets(source_id)
-        transcript_snippets = transcript_snippets[:2]  # Limit to first 2 snippets for testing
+        async with AsyncSessionLocal() as db:
+            target_lang = await LanguageStore(db).get_lang_by_code(target_lang_code)
+            transcript_snippets = await VideoService(db).fetch_transcript_snippets(source_id)
+            transcript_snippets = transcript_snippets[:2]  # Limit to first 2 snippets for testing
 
         chunk_size = 15
         for i in range(0, len(transcript_snippets), chunk_size):
             transcript_chunk = transcript_snippets[i:i+chunk_size]
             try:
-                translated_chunk = await TranslationService(db).get_ts_translations(transcript_chunk, target_lang)
+                translated_chunk = await translate_chunk(transcript_chunk, target_lang)
                 yield json.dumps({"message": "Chunk translated", "data": translated_chunk}, ensure_ascii=False) + "\n"
             except Exception as e:
                 yield json.dumps({"message": "Failed to translate chunk", "chunk_index": i, "error": str(e)}, ensure_ascii=False) + "\n"
     except Exception as e:
         raise RuntimeError(f"Error streaming translations for video (id: {source_id}). {e}")
-    finally:
-        db.close()
 
+async def translate_chunk(ts_snippets: List[TranscriptSnippet], target_lang: Language) -> List[Dict]:
+    # Limit concurrency to avoid overloading API or DB
+    semaphore = asyncio.Semaphore(10)
+
+    async def worker(ts_snippet: TranscriptSnippet):
+        async with semaphore:
+            async with AsyncSessionLocal() as db:
+                translated_snippet = await TranslationService(db).get_ts_snippet_translated_data(
+                    ts_snippet, target_lang
+                )
+                return translated_snippet
+
+    try:
+        # Run all workers concurrently, safely with separate sessions
+        return await asyncio.gather(*(worker(s) for s in ts_snippets))
+    except Exception as e:
+        raise RuntimeError(f"Error occurred while translating snippets: {e}")
+        
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)

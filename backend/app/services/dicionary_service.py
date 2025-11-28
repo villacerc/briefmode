@@ -38,7 +38,7 @@ class DictionaryService:
                 if not interpretation["is_interpretable"]:
                     return response
                 
-                source_lang = self.language_store.get_by_code(interpretation["language_code"])
+                source_lang = self.language_store.get_lang_by_code(interpretation["language_code"])
                 response["is_interpretable"] = True
                 response["data"] = await self.get_word_dictionary(
                     interpretation["normalized_text"],
@@ -60,7 +60,7 @@ class DictionaryService:
             if not interpretation["is_interpretable"]:
                 return response
             
-            source_lang = self.language_store.get_by_code(interpretation["language_code"])
+            source_lang = self.language_store.get_lang_by_code(interpretation["language_code"])
             response["is_interpretable"] = True
             response["data"] = await self.get_snippet_dictionary(
                 interpretation["normalized_text"],

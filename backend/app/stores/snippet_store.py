@@ -1,16 +1,18 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from models import Snippet, Language, TranscriptSnippet, SnippetWord
 from app.utils.helpers import sanitize_snippet
+from sqlalchemy import select
 
 class SnippetStore:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_snippet(self, text: str, language: Language) -> Snippet:
+    async def get_snippet(self, text: str, language: Language) -> Snippet:
         snippet_sanitized = sanitize_snippet(text, language.code)
-        return self.db.query(Snippet).filter(
-            Snippet.text == snippet_sanitized
-        ).first()
+        result = await self.db.execute(
+            select(Snippet).where(Snippet.text == snippet_sanitized)
+        )
+        return result.scalars().first()
 
     def get_snippet_by_id(self, snippet_id: int) -> Snippet:
         return self.db.query(Snippet).filter(Snippet.id == snippet_id).first()
@@ -26,14 +28,16 @@ class SnippetStore:
             .first()
         )
         
-    def save_ts_snippet(self, video_id: int, snippet_id: int, data: dict, end_time: float) -> TranscriptSnippet:
-        existing_ts_snippet = self.db.query(TranscriptSnippet).filter(
-            TranscriptSnippet.video_id == video_id,
-            TranscriptSnippet.start == data.start,
-        ).first()
-
+    async def save_ts_snippet(self, video_id: int, snippet_id: int, data: dict, end_time: float) -> TranscriptSnippet:
+        existing_ts_snippet_result = await self.db.execute(
+            select(TranscriptSnippet).filter(
+                TranscriptSnippet.video_id == video_id,
+                TranscriptSnippet.start == data.start,
+            )
+        )
+        existing_ts_snippet = existing_ts_snippet_result.scalars().first()
         if existing_ts_snippet:
-            return existing_ts_snippet
+            return existing_ts_snippet.id
 
         ts_snippet = TranscriptSnippet(
             video_id=video_id,
@@ -44,21 +48,18 @@ class SnippetStore:
             duration=data.duration
         )
         self.db.add(ts_snippet)
-        self.db.commit()
-        self.db.refresh(ts_snippet)
-        return ts_snippet
+        await self.db.commit()
+        return ts_snippet.id
 
-    def save_snippet(self, text: str, source_lang: Language) -> Snippet:
-        existing_snippet = self.get_snippet(text, source_lang)
-
+    async def save_snippet(self, text: str, source_lang: Language) -> Snippet:
+        existing_snippet = await self.get_snippet(text, source_lang)
         if existing_snippet:
-            return existing_snippet
+            return existing_snippet.id
 
         new_snippet = Snippet(
             text=sanitize_snippet(text, source_lang.code)
         )
         self.db.add(new_snippet)
-        self.db.commit()
-        self.db.refresh(new_snippet)
+        await self.db.commit()
 
-        return new_snippet
+        return new_snippet.id

@@ -36,7 +36,7 @@ class VideoService:
                 raise RuntimeError("Video not found")
             
             language_code = data["items"][0]["snippet"].get("defaultAudioLanguage", "en")
-            language = await self.language_store.get_by_code(language_code)
+            language = await self.language_store.get_lang_by_code(language_code)
             title = data["items"][0]["snippet"]["title"]
 
             video_id = await self.video_store.save_video({
@@ -57,9 +57,9 @@ class VideoService:
             "source_lang_code": video.language.code
         }
         
-    def fetch_transcript_snippets(self, source_id: str):
+    async def fetch_transcript_snippets(self, source_id: str):
         # Check transcript in DB
-        transcript_snippets = self.video_store.get_transcript_snippets(source_id)
+        transcript_snippets = await self.video_store.get_transcript_snippets(source_id)
         if transcript_snippets:
             return transcript_snippets
 
@@ -69,15 +69,12 @@ class VideoService:
         transcript_data = self.ytt_api.fetch(source_id, languages=[first_transcript.language_code])
 
         # Ensure language exists in DB
-        language = None
-        if not self.language_store.language_exists(transcript_data.language_code):
-            language = self.language_store.create(
-                code=transcript_data.language_code,
-                name=transcript_data.language
-            )
-        else:
-            language = self.language_store.get_by_code(transcript_data.language_code)
+        language_id = await self.language_store.save_language({
+            "code": transcript_data.language_code, 
+            "name": transcript_data.language
+        })
+        language = await self.language_store.get_lang_by_id(language_id)
 
         # Persist new video + transcript
-        self.video_store.save_transcript_snippets(source_id, language, transcript_data)
-        return self.video_store.get_transcript_snippets(source_id)
+        await self.video_store.save_transcript_snippets(source_id, language, transcript_data)
+        return await self.video_store.get_transcript_snippets(source_id)
