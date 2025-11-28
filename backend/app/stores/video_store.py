@@ -1,5 +1,5 @@
 from sqlalchemy import select
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import selectinload
 from models import Video, TranscriptSnippet, Snippet, SnippetWord, Word, Language
 from app.stores.snippet_store import SnippetStore
 
@@ -24,14 +24,13 @@ class VideoStore:
     def get_transcript_snippets(self, source_id: str):
         video = self.db.execute(
             select(Video).options(
-                joinedload(Video.transcript_snippets)
-                .joinedload(TranscriptSnippet.snippet_words)
-                .joinedload(SnippetWord.word)
-                .joinedload(Word.translations),
-                joinedload(Video.transcript_snippets)
-                .joinedload(TranscriptSnippet.snippet)
-                .joinedload(Snippet.language)
-            ).where(Video.source_id == source_id)
+                selectinload(Video.transcript_snippets)
+                    .selectinload(TranscriptSnippet.snippet_words)
+                    .selectinload(SnippetWord.word),
+                selectinload(Video.transcript_snippets)
+                    .selectinload(TranscriptSnippet.video),
+            )
+            .where(Video.source_id == source_id)
         ).scalars().first()
 
         if video and video.transcript_snippets:
@@ -40,20 +39,11 @@ class VideoStore:
 
     def save_transcript_snippets(self, source_id: str, source_lang: Language, transcript_data):
         video = self.get_video_by_source_id(source_id)
-        transcript_snippets = []
+        if not video:
+            raise ValueError(f"Video with source_id '{source_id}' not found.")
+
         for i, item in enumerate(transcript_data.snippets):
             snippet = self.snippet_store.save_snippet(item.text, source_lang)
-            
-            ts_snippet = TranscriptSnippet(
-                video_id=video.id,
-                snippet_id=snippet.id,
-                text=item.text,
-                start=item.start,
-                end=transcript_data[i + 1].start if i < len(transcript_data) - 1 else item.start + item.duration,
-                duration=item.duration
-            )
-            self.db.add(ts_snippet)
-            transcript_snippets.append(ts_snippet)
 
-        self.db.commit()
-        return transcript_snippets
+            end_time = transcript_data[i + 1].start if i < len(transcript_data) - 1 else item.start + item.duration
+            self.snippet_store.save_ts_snippet(video_id=video.id, snippet_id=snippet.id, data=item, end_time=end_time)

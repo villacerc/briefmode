@@ -20,7 +20,7 @@ class TranslationService:
 
         async def worker(ts_snippet: TranscriptSnippet, target_lang: Language):
             async with semaphore:
-                translated_snippet = await self.get_ts_translated_snippet(ts_snippet, target_lang)
+                translated_snippet = await self.get_ts_snippet_translated_data(ts_snippet, target_lang)
                 return translated_snippet
 
         try:
@@ -31,10 +31,10 @@ class TranslationService:
         except Exception as e:
             raise RuntimeError(f"Error occurred while translating snippets. {e}")
 
-    async def get_ts_translated_snippet(self, ts_snippet: TranscriptSnippet, target_lang: Language):
+    async def get_ts_snippet_translated_data(self, ts_snippet: TranscriptSnippet, target_lang: Language):
         if self.ts_snippet_has_translation_for_language(ts_snippet.snippet_id, target_lang.id):
-            video = self.video_store.get_video_by_id(ts_snippet.video_id)
-            return self.get_normalized_ts_translated_snippet(ts_snippet, target_lang, video)
+            translated_ts_snippet = self.translation_store.get_ts_snippet_by_translated_lang(ts_snippet.id, target_lang.id)
+            return self.get_normalized_ts_translated_snippet(translated_ts_snippet, target_lang)
 
         # Call AI, parse JSON, etc.
         parsed_json = await self.ai_service.fetch_ai_snippet_translation(ts_snippet.snippet.text, target_lang)
@@ -42,32 +42,28 @@ class TranslationService:
         # Save to DB
         self.translation_store.save_ai_ts_snippet_translation(ts_snippet, target_lang, parsed_json)
 
-        video = self.video_store.get_video_by_id(ts_snippet.video_id)
-        return self.get_normalized_ts_translated_snippet(ts_snippet, target_lang, video)
+        translated_ts_snippet = self.translation_store.get_ts_snippet_by_translated_lang(ts_snippet.id, target_lang.id)
+        return self.get_normalized_ts_translated_snippet(translated_ts_snippet, target_lang)
 
     def ts_snippet_has_translation_for_language(self, snippet_id: int, lang_id: int) -> bool:
         translation = self.translation_store.get_snippet_translation_by_lang(snippet_id, lang_id)
         return translation is not None
 
-    def get_normalized_ts_translated_snippet(self, ts_snippet: TranscriptSnippet, target_lang: Language, video: Video) -> Dict:
+    def get_normalized_ts_translated_snippet(self, ts_snippet: TranscriptSnippet, target_lang: Language) -> Dict:
         try:
-            snippet_words = ts_snippet.snippet_words
-
-            snippet_translation = self.translation_store.get_snippet_translation_by_lang(ts_snippet.snippet_id, target_lang.id)
-
             normalized_snippet_words = [{
                 "text": w.text,
                 "part_of_speech": w.part_of_speech_tag,
                 "romanized": w.word.romanized,
                 "translations": [{"text": t.text} for t in w.word.translations],
                 "order_index": w.order_index
-            } for w in snippet_words]
+            } for w in ts_snippet.snippet_words]
 
             return {
                 "snippet_id": ts_snippet.id,
                 "text": ts_snippet.text,
-                "translation": snippet_translation.text if snippet_translation else "",
-                "source_lang_code": ts_snippet.snippet.language.code,
+                "translation": ts_snippet.snippet.translations[0].text,
+                "source_lang_code": ts_snippet.video.language.code,
                 "target_lang_code": target_lang.code,
                 "start": ts_snippet.start,
                 "end": ts_snippet.end,

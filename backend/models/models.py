@@ -21,6 +21,7 @@ class Video(Base):
     transcript_snippets = relationship(
         "TranscriptSnippet", 
         back_populates="video", 
+        lazy="selectin",
         cascade="all, delete-orphan", 
         order_by="TranscriptSnippet.start",
     )
@@ -40,7 +41,7 @@ class TranscriptSnippet(Base):
 
     video = relationship("Video", back_populates="transcript_snippets")
     snippet = relationship("Snippet", back_populates="transcript_snippets")
-    snippet_words = relationship("SnippetWord", back_populates="transcript_snippet", cascade="all, delete-orphan", order_by="SnippetWord.order_index")
+    snippet_words = relationship("SnippetWord", back_populates="transcript_snippet", cascade="all, delete-orphan", lazy="selectin", order_by="SnippetWord.order_index")
 
     __table_args__ = (
         Index("ix_snippet_videoId_start", "video_id", "start", unique=True),
@@ -50,20 +51,14 @@ class Snippet(Base):
     __tablename__ = "snippets"
 
     id = Column(Integer, primary_key=True)
-    language_id = Column(Integer, ForeignKey("languages.id"), nullable=False)
-    text = Column(Text, nullable=False)
+    text = Column(Text, nullable=False, unique=True, index=True)
 
     created_at = Column(DateTime, server_default=func.now())
-
-    language = relationship("Language", back_populates="snippets")
+    
     snippet_words = relationship("SnippetWord", back_populates="snippet", cascade="all, delete-orphan", lazy="selectin", order_by="SnippetWord.order_index")
     translations = relationship("SnippetTranslation", back_populates="snippet", cascade="all, delete-orphan")
     transcript_snippets = relationship("TranscriptSnippet", back_populates="snippet", cascade="all, delete-orphan")
-    dictionary_pos = relationship("DictionaryPOS", back_populates="example_snippet", uselist=False)
-    
-    __table_args__ = (
-        Index("ix_snippet_text_lang", "text", "language_id"),
-    )
+    dictionary_pos_list = relationship("DictionaryPOS", back_populates="snippet", cascade="all, delete-orphan")
 
 class SnippetTranslation(Base):
     __tablename__ = "snippet_translations"
@@ -86,19 +81,21 @@ class DictionaryPOS(Base):
     __tablename__ = "dictionary_pos"
 
     id = Column(Integer, primary_key=True)
-    word_id = Column(Integer, ForeignKey("words.id", ondelete="CASCADE"), nullable=False, index=True)
-    snippet_id = Column(Integer, ForeignKey("snippets.id", ondelete="CASCADE"), nullable=False)
+    word_id = Column(Integer, ForeignKey("words.id", ondelete="CASCADE"), nullable=False)
+    language_id = Column(Integer, ForeignKey("languages.id"), nullable=False)
+    snippet_id = Column(Integer, ForeignKey("snippets.id"), nullable=False)
     name = Column(String(50), nullable=False)
     description = Column(Text)
-    example_text = Column(Text, nullable=False)
 
     created_at = Column(DateTime, server_default=func.now())
     
-    example_snippet = relationship("Snippet", back_populates="dictionary_pos", uselist=False)
-    word = relationship("Word", back_populates="pos_examples")
+    language = relationship("Language", back_populates="dictionary_pos_list")
+    snippet = relationship("Snippet", back_populates="dictionary_pos_list", lazy="selectin")
+    word = relationship("Word", back_populates="dictionary_pos_list")
 
     __table_args__ = (
         UniqueConstraint("word_id", "name", name="uq_word_pos_name"),
+        Index("ix_dictionary_pos_word_lang", "word_id", "language_id"),
     )
 
 class SnippetWord(Base):
@@ -119,7 +116,7 @@ class SnippetWord(Base):
 
     transcript_snippet = relationship("TranscriptSnippet", back_populates="snippet_words")
     snippet = relationship("Snippet", back_populates="snippet_words")
-    word = relationship("Word", back_populates="snippet_words")
+    word = relationship("Word", back_populates="snippet_words", lazy="selectin")
 
     __table_args__ = (
         CheckConstraint(
@@ -146,7 +143,7 @@ class Word(Base):
     language = relationship("Language", back_populates="words")
     snippet_words = relationship("SnippetWord", back_populates="word")
     translations = relationship("Translation", back_populates="word", cascade="all, delete-orphan")
-    pos_examples = relationship("DictionaryPOS", back_populates="word", cascade="all, delete-orphan")
+    dictionary_pos_list = relationship("DictionaryPOS", back_populates="word", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("ix_word_text_lang", "text", "language_id", unique=True),
@@ -167,8 +164,6 @@ class Translation(Base):
 
     __table_args__ = (
         Index("ix_translation_word_lang", "word_id", "language_id"),
-    )
-    __table_args__ = (
         UniqueConstraint("word_id", "language_id", "text", name="uq_translation_word_lang_text"),
     )
 
@@ -182,7 +177,7 @@ class Language(Base):
 
     created_at = Column(DateTime, server_default=func.now())
 
-    snippets = relationship("Snippet", back_populates="language")
+    dictionary_pos_list = relationship("DictionaryPOS", back_populates="language")
     snippet_translations = relationship("SnippetTranslation", back_populates="language")
     words = relationship("Word", back_populates="language")
     translations = relationship("Translation", back_populates="language")

@@ -172,7 +172,7 @@ class AIService:
                           "part_of_speech": "<part of speech>",
                           "romanized": "<romanized form in Latin>",
                           "phonetic_spelling": "<simplified pronunciation using familiar English letters and stress marks (e.g., huh-LOH, HEE-loh, sah-lahm), avoiding IPA symbols>",
-                          "translations": "<a list of at least three translation candidates if possible>"
+                          "translations": "<a list of at least three translation candidates if possible in {target_lang.name}>"
                         }}
                       ]
                     }}

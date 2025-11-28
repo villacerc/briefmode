@@ -37,24 +37,24 @@ def sanitize_word(word: str) -> str:
 
     return word
 
-def sanitize_phrase(phrase: str, lang: str = "en") -> str:
+def sanitize_snippet(text: str, lang: str = "en") -> str:
     # Unicode normalize + casefold
-    phrase = unicodedata.normalize("NFC", phrase)
-    phrase = phrase.casefold()
+    text = unicodedata.normalize("NFC", text)
+    text = text.casefold()
 
     # Remove punctuation except apostrophe
-    phrase = re.sub(r"[!\"#$%&()*+,-./:;<=>?@[\\\]^_`{|}~]", "", phrase)
+    text = re.sub(r"[!\"#$%&()*+,-./:;<=>?@[\\\]^_`{|}~]", "", text)
 
     # If language uses spaces, sanitize each word separately
     if lang not in NO_SPACE_LANGUAGES:
-        words = phrase.split()
+        words = text.split()
         words = [sanitize_word(w) for w in words if w]
-        phrase = " ".join(words)
+        text = " ".join(words)
     else:
         # For no-space languages, sanitize the string as a whole
-        phrase = sanitize_word(phrase)
+        text = sanitize_word(text)
 
-    return phrase
+    return text
 
 def is_single_word(text):
     text = text.strip()

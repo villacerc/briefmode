@@ -18,17 +18,15 @@ class DictionaryStore:
         return (
             self.db.query(DictionaryPOS)
             .options(
-                selectinload(DictionaryPOS.example_snippet)
+                selectinload(DictionaryPOS.snippet)
                     .selectinload(Snippet.snippet_words)
                     .selectinload(SnippetWord.word)
                     .selectinload(Word.translations),
                 selectinload(DictionaryPOS.word),
             )
-            .join(DictionaryPOS.example_snippet)
-            .join(Snippet.translations)
             .filter(
                 DictionaryPOS.word_id == word_id,
-                SnippetTranslation.language_id == target_lang_id,
+                DictionaryPOS.language_id == target_lang_id
             )
             .all()
         )
@@ -44,7 +42,7 @@ class DictionaryStore:
 
         return word
     
-    def save_dictionary_pos(self, word: Word, data: dict, source_lang: Language) -> DictionaryPOS:
+    def save_dictionary_pos(self, word: Word, data: dict, source_lang: Language, target_lang: Language) -> DictionaryPOS:
         existing_pos = self.db.query(DictionaryPOS).filter(
             DictionaryPOS.word_id == word.id,
             DictionaryPOS.name == data["part_of_speech"]
@@ -56,13 +54,14 @@ class DictionaryStore:
         snippet = self.snippet_store.save_snippet(data["example"], source_lang)
 
         part_of_speech = DictionaryPOS(
-            snippet_id=snippet.id,
             word_id=word.id,
+            language_id=target_lang.id,
+            snippet_id=snippet.id,
             name=data["part_of_speech"],
             description=data["definition"],
-            example_text=data["example"],
         )
         self.db.add(part_of_speech)
+        self.db.flush()
 
         return part_of_speech
     
@@ -71,12 +70,11 @@ class DictionaryStore:
 
         # TODO: Run in parallel
         for pos in pos_data:
-            snippet = self.snippet_store.save_snippet(pos["example"], source_lang)
-            self.save_dictionary_pos(word, pos, source_lang)
-
+            dictionary_pos = self.save_dictionary_pos(word, pos, source_lang, target_lang)
+            
             # Fetch and save example translation
             translation_json = await self.ai_service.fetch_ai_snippet_translation(pos["example"], target_lang)
-            self.translation_store.save_ai_snippet_translation(snippet, target_lang, translation_json)
+            self.translation_store.save_ai_snippet_translation(dictionary_pos.snippet, target_lang, translation_json)
 
         self.db.commit()
 

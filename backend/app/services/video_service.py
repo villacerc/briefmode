@@ -78,4 +78,5 @@ class VideoService:
             language = self.language_store.get_by_code(transcript_data.language_code)
 
         # Persist new video + transcript
-        return self.video_store.save_transcript_snippets(source_id, language, transcript_data)
+        self.video_store.save_transcript_snippets(source_id, language, transcript_data)
+        return self.video_store.get_transcript_snippets(source_id)
