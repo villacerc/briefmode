@@ -9,7 +9,7 @@ import json
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from models import TranscriptSnippet, Language
-from database import get_db
+from database import AsyncSessionLocal
 import logging
 from app.services import VideoService, TranslationService, DictionaryService, TTSService
 from app.stores import LanguageStore, VideoStore
@@ -114,20 +114,16 @@ async def get_transcript(video_source_id: str, target_lang_code: str):
         )
 
 @app.get("/api/languages", summary="Get Languages")
-def get_video_languages():
-    db = next(get_db())
-    try:
-        languages = db.execute(select(Language)).scalars().all()
-        return {"data": languages}
-    except Exception as e:
-        message = f"Error occurred while attempting to fetch languages. {e}"
-        logger.error(message)
-        raise HTTPException(
-            status_code=500,
-            detail=message
-        )
-    finally:
-        db.close()
+async def get_video_languages():
+     async with AsyncSessionLocal() as db:
+        try:
+            result = await db.execute(select(Language))
+            languages = result.scalars().all()
+            return {"data": languages}
+        except Exception as e:
+            message = f"Error occurred while attempting to fetch languages. {e}"
+            logger.error(message)
+            raise HTTPException(status_code=500, detail=message)
 
 # Stream translations for the transcript.
 async def stream_translations(source_id: str, target_lang_code: str):

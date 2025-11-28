@@ -16,7 +16,7 @@ engine = create_async_engine(
     pool_timeout=30,     # seconds to wait before giving up
     pool_pre_ping=True   # makes dead connections auto-reconnect
 )
-AsyncSessionLocal  = sessionmaker(
+AsyncSessionLocal = sessionmaker(
     class_=AsyncSession,
     expire_on_commit=False, 
     bind=engine
@@ -24,10 +24,6 @@ AsyncSessionLocal  = sessionmaker(
 
 class Base(DeclarativeBase):
     pass
-
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    async with AsyncSessionLocal() as session:
-        yield session
 
 async def create_tables():
     async with engine.begin() as conn:
