@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from models import Video, TranscriptSnippet, Snippet, SnippetWord, Word, Language
-from app.stores.snippet_store import SnippetStore
+from .snippet_store import SnippetStore
 
 class VideoStore:
     def __init__(self, db):
@@ -31,16 +31,9 @@ class VideoStore:
         result = await self.db.execute(
             select(Video).options(
                 selectinload(Video.transcript_snippets)
-                    .selectinload(TranscriptSnippet.snippet_words)
-                    .selectinload(SnippetWord.word),
-                selectinload(Video.transcript_snippets)
-                    .selectinload(TranscriptSnippet.video),
-                selectinload(Video.transcript_snippets)
-                    .selectinload(TranscriptSnippet.snippet)
             )
             .where(Video.source_id == source_id)
         )
-
         video = result.scalars().first()
 
         if video and video.transcript_snippets:

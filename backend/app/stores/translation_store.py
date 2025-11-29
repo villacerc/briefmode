@@ -4,14 +4,26 @@ from sqlalchemy.dialects.postgresql import insert
 from models import SnippetType, Translation, SnippetTranslation, TranscriptSnippet, Snippet, Language, SnippetWord, Word
 from app.utils.helpers import sanitize_word
 from .word_store import WordStore
+from .video_store import VideoStore
+
 from sqlalchemy import select
 
 class TranslationStore:
     def __init__(self, db: Session):
         self.db = db
         self.word_store = WordStore(db)
-    
-    async def get_word_translations_by_lang(self, word_id: int, lang_id: int) -> List[Translation]:
+        self.video_store = VideoStore(db)
+
+    async def get_snippet_translation(self, snippet_id: int, lang_id: int) -> list:
+        result = await self.db.execute(
+            select(SnippetTranslation).where(
+                SnippetTranslation.snippet_id == snippet_id,
+                SnippetTranslation.language_id == lang_id
+            )
+        )
+        return result.scalars().first()
+
+    async def get_word_translations(self, word_id: int, lang_id: int) -> List[Translation]:
         result = await self.db.execute(
             select(Translation).where(
                 Translation.word_id == word_id,
@@ -73,14 +85,14 @@ class TranslationStore:
         )
         return result.scalars().first()
 
-    async def save_snippet_translation(self, text: str, snippet: Snippet, target_lang: Language) -> SnippetTranslation:
-        existing_snippet_translation = await self.get_snippet_translation_by_lang(snippet.id, target_lang.id)
+    async def save_snippet_translation(self, text: str, snippet_id: int, target_lang: Language) -> SnippetTranslation:
+        existing_snippet_translation = await self.get_snippet_translation_by_lang(snippet_id, target_lang.id)
         if existing_snippet_translation:
             return existing_snippet_translation.id
 
         snippet_translation = SnippetTranslation(
             text=text,
-            snippet_id=snippet.id,
+            snippet_id=snippet_id,
             language_id=target_lang.id,
         )
         self.db.add(snippet_translation)
@@ -98,9 +110,12 @@ class TranslationStore:
         return snippet_translation
 
     async def save_ai_ts_snippet_translation(self, ts_snippet: TranscriptSnippet, target_lang: Language, data: dict) -> SnippetTranslation:
-        await self.word_store.save_snippet_words(data["word_parts"], SnippetType.TRANSCRIPT, ts_snippet.id, ts_snippet.video.language_id, target_lang.id)
+        video = await self.video_store.get_video_by_id(ts_snippet.video_id)
+        source_lang = video.language
+
+        await self.word_store.save_snippet_words(data["word_parts"], SnippetType.TRANSCRIPT, ts_snippet.id, source_lang.id, target_lang.id)
         
-        snippet_translation_id = await self.save_snippet_translation(data["translation"], ts_snippet.snippet, target_lang)
+        snippet_translation_id = await self.save_snippet_translation(data["translation"], ts_snippet.snippet_id, target_lang)
         return snippet_translation_id
 
 

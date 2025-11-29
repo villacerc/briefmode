@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session, selectinload
-from models import Snippet, Language, TranscriptSnippet, SnippetWord
+from models import Snippet, Language, TranscriptSnippet, SnippetWord, SnippetTranslation
 from app.utils.helpers import sanitize_snippet
 from sqlalchemy import select
 
@@ -14,19 +14,22 @@ class SnippetStore:
         )
         return result.scalars().first()
 
-    def get_snippet_by_id(self, snippet_id: int) -> Snippet:
-        return self.db.query(Snippet).filter(Snippet.id == snippet_id).first()
+    async def get_snippet_by_id(self, snippet_id: int) -> Snippet:
+        result = await self.db.execute(
+            select(Snippet).where(Snippet.id == snippet_id)
+        )
+        return result.scalars().first()
 
-    def get_ts_snippet_by_id(self, ts_snippet_id: int) -> TranscriptSnippet:
-        return (
-            self.db.query(TranscriptSnippet)
+    async def get_ts_snippet_by_id(self, ts_snippet_id: int) -> TranscriptSnippet:
+        result = await self.db.execute(
+            select(TranscriptSnippet)
             .options(
                 selectinload(TranscriptSnippet.snippet_words)
                 .selectinload(SnippetWord.word)
             )
-            .filter(TranscriptSnippet.id == ts_snippet_id)
-            .first()
+            .where(TranscriptSnippet.id == ts_snippet_id)
         )
+        return result.scalars().first()
         
     async def save_ts_snippet(self, video_id: int, snippet_id: int, data: dict, end_time: float) -> TranscriptSnippet:
         existing_ts_snippet_result = await self.db.execute(

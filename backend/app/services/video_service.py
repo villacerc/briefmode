@@ -12,12 +12,8 @@ class VideoService:
         self.google_api_key = os.getenv("GOOGLE_YT_DATA_API_KEY")
         self.ytt_api_url = "https://www.googleapis.com/youtube/v3/videos"
     
-    async def fetch_video_info(self, source_id: str) -> Video:
+    async def fetch_video(self, source_id: str) -> Video:
         try:
-            video = await self.video_store.get_video_by_source_id(source_id)
-            if video:          
-                return self.get_normalized_video_info(video)
-    
             ytt_api_params = {
                 "part": "snippet,contentDetails",
                 "id": source_id,
@@ -46,11 +42,19 @@ class VideoService:
             })
             video = await self.video_store.get_video_by_id(video_id)
 
-            return self.get_normalized_video_info(video)
+            return video
         except Exception as e:
             raise RuntimeError(f"Error occurred while attempting to fetch YouTube video info. {e}")
+    
+    async def get_video_data(self, source_id: str):
+        video = await self.video_store.get_video_by_source_id(source_id)
+        if video:
+            return self.get_normalized_video_data(video)
 
-    def get_normalized_video_info(self, video: Video):
+        video = await self.fetch_video(source_id)
+        return self.get_normalized_video_data(video)
+
+    def get_normalized_video_data(self, video: Video):
         return {
             "source_id": video.source_id,
             "title": video.title,

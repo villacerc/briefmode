@@ -84,8 +84,8 @@ async def get_input_definition(text: str, source_lang_code: str, target_lang_cod
 async def get_video(source_id: str):
     async with AsyncSessionLocal() as db:
         try:
-            video_info = await VideoService(db).fetch_video_info(source_id)
-            return video_info
+            video_data = await VideoService(db).get_video_data(source_id)
+            return video_data
         except Exception as e:
             message = f"Error occurred while attempting to fetch video info (id: {source_id}). {e}"
             logger.error(message)
@@ -100,7 +100,7 @@ async def get_transcript(video_source_id: str, target_lang_code: str):
         async with AsyncSessionLocal() as db:
             video = await VideoStore(db).get_video_by_source_id(video_source_id)
             if not video:
-                raise RuntimeError(f"Video not found (id: {video_source_id})")
+                video = await VideoService(db).fetch_video(video_source_id)
 
         return StreamingResponse(
             stream_translations(video.source_id, target_lang_code),
