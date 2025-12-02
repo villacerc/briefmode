@@ -11,11 +11,13 @@ class TTSService:
         self.credentials_path = os.getenv("GOOGLE_CREDENTIALS_PATH")
         self.google_tts_url = "https://texttospeech.googleapis.com/v1beta1/text:synthesize"
 
-    async def get_tts_audio(self, text: str, lang: Language) -> str:
+    async def get_word_tts_audio(self, word_id: int) -> str:
         try:
             # check if TTS audio already exists in DB
-            word = self.word_store.get_word_by_lang(text, lang.id)
-            if word and word.tts_audio:
+            word = await self.word_store.get_word_by_id(word_id)
+            if not word:
+                raise ValueError(f"Word with id {word_id} not found")
+            if word.tts_audio:
                 return word.tts_audio
 
             access_token = self.get_google_access_token()
@@ -29,10 +31,10 @@ class TTSService:
                 },
                 "input": {
                     "prompt": "Read aloud just the text once in a warm, welcoming tone.",
-                    "text": text
+                    "text": word.text
                 },
                 "voice": {
-                    "languageCode": lang.bcp47_code,
+                    "languageCode": word.language.bcp47_code,
                     "modelName": "gemini-2.5-flash-lite-preview-tts",
                     "name": "Achernar"
                 }
@@ -51,9 +53,9 @@ class TTSService:
             audio_content = data.get("audioContent")
 
             # save TTS audio to DB
-            self.word_store.update_word(word, {"tts_audio": audio_content})
+            await self.word_store.update_word(word, {"tts_audio": audio_content})
 
-            return audio_content
+            return word.tts_audio
         except Exception as e:
             raise RuntimeError(f"Error occurred while attempting to fetch text to speech audio. {e}")
     

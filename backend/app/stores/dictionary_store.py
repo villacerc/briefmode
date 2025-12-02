@@ -49,8 +49,7 @@ class DictionaryStore:
     async def save_word_dictionary_entry(self, data: dict, source_lang: Language, target_lang: Language) -> int:
         word_id = await self.word_store.save_word(
             data=data,
-            source_lang_id=source_lang.id,
-            target_lang_id=target_lang.id,
+            source_lang_id=source_lang.id
         )
 
         await self.save_word_pos_list(word_id, data, source_lang, target_lang)

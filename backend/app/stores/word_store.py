@@ -18,7 +18,13 @@ class WordStore:
         result = await self.db.execute(query)
         return result.scalars().all()
 
-    async def get_word_by_lang(self, word_text: str, source_lang_id: int) -> Word:
+    async def get_word_by_id(self, word_id: int) -> Word:
+        result = await self.db.execute(
+            select(Word).where(Word.id == word_id).options(selectinload(Word.language))
+        )
+        return result.scalars().first()
+
+    async def get_word_by_text_and_lang(self, word_text: str, source_lang_id: int) -> Word:
         word_sanitized = sanitize_word(word_text)
         result = await self.db.execute(
             select(Word).where(
@@ -46,7 +52,7 @@ class WordStore:
         existing_snippet_words = await self.get_snippet_words(snippet_type, snippet_id)
 
         for i, part in enumerate(words):
-            word_id = await self.save_word(part, source_lang_id, target_lang_id)
+            word_id = await self.save_word(part, source_lang_id)
 
             await self.save_word_translations(word_id, part["translations"], target_lang_id)
 
@@ -76,8 +82,8 @@ class WordStore:
 
         await self.db.commit()
 
-    async def save_word(self, data: object, source_lang_id: int, target_lang_id: int) -> int:
-        existing_word = await self.get_word_by_lang(data["word"], source_lang_id)
+    async def save_word(self, data: object, source_lang_id: int) -> int:
+        existing_word = await self.get_word_by_text_and_lang(data["word"], source_lang_id)
         if existing_word:
             return existing_word.id
 
@@ -93,11 +99,11 @@ class WordStore:
         await self.db.commit()
         return word.id
      
-    def update_word(self, word: Word, data: dict):
+    async def update_word(self, word: Word, data: dict):
         for key, value in data.items():
             # Only update attributes that actually exist on the Word model
             if hasattr(word, key):
                 setattr(word, key, value)
 
-        self.db.commit()
-        self.db.refresh(word)
+        await self.db.commit()
+        await self.db.refresh(word)

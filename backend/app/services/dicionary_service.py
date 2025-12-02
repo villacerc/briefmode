@@ -25,7 +25,7 @@ class DictionaryService:
             }
 
             if is_word:
-                word = await self.word_store.get_word_by_lang(text, source_lang.id)
+                word = await self.word_store.get_word_by_text_and_lang(text, source_lang.id)
                 if word:
                     response["is_interpretable"] = True
                     response["data"] = await self.get_word_dictionary(
@@ -88,6 +88,7 @@ class DictionaryService:
 
             return {
                 "word": word.text,
+                "word_id": word.id,
                 "romanized": word.romanized,
                 "phonetic_spelling": word.phonetic_spelling,
                 "source_lang_code": word.language.code,
@@ -112,7 +113,7 @@ class DictionaryService:
 
     async def get_word_dictionary(self, text: str, source_lang: Language, target_lang: Language):
         try:
-            word = await self.word_store.get_word_by_lang(text, source_lang.id)
+            word = await self.word_store.get_word_by_text_and_lang(text, source_lang.id)
 
             if word:
                 # check if POS exists for this word in target language

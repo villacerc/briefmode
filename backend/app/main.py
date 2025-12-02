@@ -47,20 +47,19 @@ async def root():
         "version": "1.0.0"
     }
 
-@app.get("/api/tts/{text}", summary="Text to Speech")
-async def text_to_speech(text: str, source_lang_code: str):
-    db = next(get_db())
-    try:
-        source_lang = LanguageStore(db).get_lang_by_code(source_lang_code)
-        audioBase64 = await TTSService(db).get_tts_audio(text, source_lang)
-        return {"audio": audioBase64}
-    except Exception as e:
-        message = f"Error occurred while attempting to convert text to speech. {e}"
-        logger.error(message)
-        raise HTTPException(
-            status_code=500,
-            detail=message
-        )
+@app.get("/api/word_tts/{word_id}", summary="Text to Speech")
+async def text_to_speech(word_id: int):
+    async with AsyncSessionLocal() as db:
+        try:
+            audioBase64 = await TTSService(db).get_word_tts_audio(word_id)
+            return {"audio": audioBase64}
+        except Exception as e:
+            message = f"Error occurred while attempting to convert text to speech. {e}"
+            logger.error(message)
+            raise HTTPException(
+                status_code=500,
+                detail=message
+            )
 
 @app.get("/api/dictionary/{text}", summary="Get Input Definition")
 async def get_input_definition(text: str, source_lang_code: str, target_lang_code: str):
