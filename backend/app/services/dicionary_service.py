@@ -2,6 +2,7 @@ from app.stores import LanguageStore, TranslationStore, DictionaryStore, WordSto
 from models import Language, DictionaryPOS, Word
 from .ai_service import AIService
 from app.utils.helpers import is_single_word
+from typing import List
 
 class DictionaryService:
     def __init__(self, db):
@@ -24,8 +25,8 @@ class DictionaryService:
             }
 
             if is_word:
-                word = self.word_store.get_word_by_lang(text, source_lang.id)
-                if word is not None:
+                word = await self.word_store.get_word_by_lang(text, source_lang.id)
+                if word:
                     response["is_interpretable"] = True
                     response["data"] = await self.get_word_dictionary(
                         word.text,
@@ -47,8 +48,8 @@ class DictionaryService:
                 )
                 return response
             
-            snippet = self.snippet_store.get_snippet_by_lang(text, source_lang)
-            if snippet is not None:
+            snippet = await self.snippet_store.get_snippet(text, source_lang)
+            if snippet:
                 response["is_interpretable"] = True
                 response["data"] = await self.get_snippet_dictionary(
                     snippet.text,
@@ -60,7 +61,7 @@ class DictionaryService:
             if not interpretation["is_interpretable"]:
                 return response
             
-            source_lang = self.language_store.get_lang_by_code(interpretation["language_code"])
+            source_lang = await self.language_store.get_lang_by_code(interpretation["language_code"])
             response["is_interpretable"] = True
             response["data"] = await self.get_snippet_dictionary(
                 interpretation["normalized_text"],
@@ -72,10 +73,18 @@ class DictionaryService:
         except Exception as e:
             raise RuntimeError(f"Error getting dictionary entry for '{text}'. {e}")
 
-    def get_normalized_word_dictionary_entry(self, word: Word, target_lang: Language):
+    async def get_normalized_word_dictionary_entry(self, word: Word, dictionary_pos_list: List[DictionaryPOS], target_lang: Language):
         try:
-            translations = self.translation_store.get_word_translations_by_lang(word.id, target_lang.id)
-            dictionary_pos = self.dictionary_store.get_word_dictionary_pos_by_lang(word.id, target_lang.id)
+            word_translations = await self.translation_store.get_word_translations_by_lang(word.id, target_lang.id)
+            snippet_translation_list = [
+                await self.translation_store.get_snippet_translation_by_lang(pos.snippet_id, target_lang.id)
+                for pos in dictionary_pos_list
+            ]
+            word_ids = {sw.word_id for pos in dictionary_pos_list for sw in pos.snippet.snippet_words}
+            snippet_word_translations_map = {
+                wid: await self.translation_store.get_word_translations_by_lang(wid, target_lang.id)
+                for wid in word_ids
+            }
 
             return {
                 "word": word.text,
@@ -83,7 +92,7 @@ class DictionaryService:
                 "phonetic_spelling": word.phonetic_spelling,
                 "source_lang_code": word.language.code,
                 "target_lang_code": target_lang.code,
-                "translations": [t.text for t in translations],
+                "translations": [t.text for t in word_translations],
                 "parts_of_speech": [{
                     "name": pos.name,
                     "definition": pos.description,
@@ -91,11 +100,11 @@ class DictionaryService:
                         "text": w.text,
                         "part_of_speech": w.part_of_speech_tag,
                         "romanized": w.word.romanized,
-                        "translations": [{"text": t.text} for t in w.word.translations],
+                        "translations": [{"text": t.text} for t in snippet_word_translations_map[w.word_id]],
                         "order_index": w.order_index
-                    } for w in pos.example_snippet.snippet_words],
-                    "example_translation": pos.example_snippet.translations[0].text
-                } for pos in dictionary_pos]
+                    } for w in pos.snippet.snippet_words],
+                    "example_translation": snippet_translation_list[i].text
+                } for i, pos in enumerate(dictionary_pos_list)]
             }
 
         except Exception as e:
@@ -103,56 +112,63 @@ class DictionaryService:
 
     async def get_word_dictionary(self, text: str, source_lang: Language, target_lang: Language):
         try:
-            word = self.word_store.get_word_by_lang(text, source_lang.id)
+            word = await self.word_store.get_word_by_lang(text, source_lang.id)
 
-            if word is not None:
+            if word:
                 # check if POS exists for this word in target language
-                dictionary_pos_list = self.dictionary_store.get_word_dictionary_pos_by_lang(word.id, target_lang.id)
-                if len(dictionary_pos_list) > 0:
-                    return self.get_normalized_word_dictionary_entry(word, target_lang)
+                dictionary_pos_list = await self.dictionary_store.get_word_dictionary_pos_list_by_lang(word.id, target_lang.id)
+                if dictionary_pos_list:
+                    return await self.get_normalized_word_dictionary_entry(word, dictionary_pos_list, target_lang)
                 else:
                     # fetch POS from AI and save
-                    dictionary_pos = await self.ai_service.fetch_ai_dictionary_pos(
+                    dictionary_pos_data = await self.ai_service.fetch_ai_dictionary_pos(
                         text,
                         source_lang,
                         target_lang
                     )
-                    word = await self.dictionary_store.save_word_pos_entry(
-                        word,
-                        dictionary_pos,
+                    await self.dictionary_store.save_word_pos_list(
+                        word.id,
+                        dictionary_pos_data,
                         source_lang,
                         target_lang
                     )
-                    return self.get_normalized_word_dictionary_entry(word, target_lang)
+                    dictionary_pos_list = await self.dictionary_store.get_word_dictionary_pos_list_by_lang(word.id, target_lang.id)
+                    return await self.get_normalized_word_dictionary_entry(word, dictionary_pos_list, target_lang)
             
             dictionary_entry = await self.ai_service.fetch_ai_dictionary_entry(
                 text,
                 source_lang,
                 target_lang
             )
-
-            word = await self.dictionary_store.save_word_dictionary_entry(
+            word_id = await self.dictionary_store.save_word_dictionary_entry(
                 dictionary_entry,
                 source_lang,
                 target_lang
             )
+            word = await self.word_store.get_word_by_id(word_id)
+            dictionary_pos_list = await self.dictionary_store.get_word_dictionary_pos_list_by_lang(word.id, target_lang.id)
 
-            return self.get_normalized_word_dictionary_entry(word, target_lang)
+            return await self.get_normalized_word_dictionary_entry(word, dictionary_pos_list, target_lang)
         except Exception as e:
             raise RuntimeError(f"Error getting word dictionary for '{text}'. {e}")
 
     async def get_snippet_dictionary(self, text: str, source_lang: Language, target_lang: Language):
         try:
-            snippet = self.snippet_store.save_snippet(text, source_lang)
-
-            snippet_translation = self.translation_store.get_snippet_translation_by_lang(snippet.id, target_lang.id)
-
+            snippet_id = await self.snippet_store.save_snippet(text, source_lang)
+    
+            snippet_translation = await self.translation_store.get_snippet_translation_by_lang(snippet_id, target_lang.id)
             if snippet_translation is None:
-                ai_data = await self.ai_service.fetch_ai_snippet_translation(snippet.text, target_lang)
-                snippet_translation = self.translation_store.save_ai_snippet_translation(snippet, target_lang, ai_data)
-                self.db.refresh(snippet)
+                ai_data = await self.ai_service.fetch_ai_snippet_translation(text, target_lang)
+                snippet_translation_id = await self.translation_store.save_ai_snippet_translation(snippet_id, source_lang, target_lang, ai_data)
+                snippet_translation = await self.translation_store.get_snippet_translation_by_id(snippet_translation_id)
 
-            snippet_words = snippet.snippet_words
+            snippet = await self.snippet_store.get_snippet_by_id(snippet_id)
+
+            word_ids = {sw.word_id for sw in snippet.snippet_words}
+            snippet_word_translations_map = {
+                wid: await self.translation_store.get_word_translations_by_lang(wid, target_lang.id)
+                for wid in word_ids
+            }
 
             return {
                 "text": snippet.text,
@@ -163,9 +179,9 @@ class DictionaryService:
                     "text": w.text,
                     "part_of_speech": w.part_of_speech_tag,
                     "romanized": w.word.romanized,
-                    "translations": [{"text": t.text} for t in w.word.translations],
+                    "translations": [{"text": t.text} for t in snippet_word_translations_map[w.word_id]],
                     "order_index": w.order_index
-                } for w in snippet_words]
+                } for w in snippet.snippet_words]
             }
 
         except Exception as e:

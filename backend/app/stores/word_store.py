@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from models import Word, Translation, SnippetType, SnippetWord
@@ -9,15 +9,6 @@ class WordStore:
     def __init__(self, db: Session):
         self.db = db
         self.snippet_store = SnippetStore(db)
-
-    async def get_word_translations(self, word_id: int, target_lang_id: int) -> list:
-        result = await self.db.execute(
-            select(Translation).where(
-                Translation.word_id == word_id,
-                Translation.language_id == target_lang_id
-            )
-        )
-        return result.scalars().all()
 
     async def get_snippet_words(self, snippet_type: SnippetType, snippet_id: int) -> list:
         if snippet_type == SnippetType.POS_EXAMPLE:
@@ -34,6 +25,7 @@ class WordStore:
                 Word.text == word_sanitized,
                 Word.language_id == source_lang_id
             )
+            .options(selectinload(Word.language))
         )
         return result.scalars().first()
 

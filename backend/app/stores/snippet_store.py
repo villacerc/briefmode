@@ -17,6 +17,9 @@ class SnippetStore:
     async def get_snippet_by_id(self, snippet_id: int) -> Snippet:
         result = await self.db.execute(
             select(Snippet).where(Snippet.id == snippet_id)
+            .options(
+                selectinload(Snippet.snippet_words)
+            )
         )
         return result.scalars().first()
 

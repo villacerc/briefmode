@@ -64,21 +64,19 @@ async def text_to_speech(text: str, source_lang_code: str):
 
 @app.get("/api/dictionary/{text}", summary="Get Input Definition")
 async def get_input_definition(text: str, source_lang_code: str, target_lang_code: str):
-    db = next(get_db())
-    try:
-        source_lang = LanguageStore(db).get_lang_by_code(source_lang_code)
-        target_lang = LanguageStore(db).get_lang_by_code(target_lang_code)
-        dictionary_entry = await DictionaryService(db).get_dictionary_entry(text, source_lang, target_lang)
-        return dictionary_entry
-    except Exception as e:
-        message = f"Error occurred while attempting to fetch input definition for '{text}'. {e}"
-        logger.error(message)
-        raise HTTPException(
-            status_code=500,
-            detail=message
-        )
-    finally:
-        db.close()
+    async with AsyncSessionLocal() as db:
+        try:
+            source_lang = await LanguageStore(db).get_lang_by_code(source_lang_code)
+            target_lang = await LanguageStore(db).get_lang_by_code(target_lang_code)
+            dictionary_entry = await DictionaryService(db).get_dictionary_entry(text, source_lang, target_lang)
+            return dictionary_entry
+        except Exception as e:
+            message = f"Error occurred while attempting to fetch input definition for '{text}'. {e}"
+            logger.error(message)
+            raise HTTPException(
+                status_code=500,
+                detail=message
+            )
 
 @app.get("/api/video/{source_id}", summary="Get Video")
 async def get_video(source_id: str):
