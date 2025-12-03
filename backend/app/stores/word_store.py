@@ -3,12 +3,10 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from models import Word, Translation, SnippetType, SnippetWord
 from app.utils.helpers import sanitize_word, is_latin_script
-from .snippet_store import SnippetStore
 
 class WordStore:
     def __init__(self, db: Session):
         self.db = db
-        self.snippet_store = SnippetStore(db)
 
     async def get_snippet_words(self, snippet_type: SnippetType, snippet_id: int) -> list:
         if snippet_type == SnippetType.POS_EXAMPLE:
@@ -47,40 +45,6 @@ class WordStore:
         self.db.add(snippet_word)
         await self.db.commit()
         return snippet_word.id
-
-    async def save_snippet_words(self, words: list, snippet_type: SnippetType, snippet_id: int, source_lang_id: int, target_lang_id: int):
-        existing_snippet_words = await self.get_snippet_words(snippet_type, snippet_id)
-
-        for i, part in enumerate(words):
-            word_id = await self.save_word(part, source_lang_id)
-
-            await self.save_word_translations(word_id, part["translations"], target_lang_id)
-
-            if not existing_snippet_words:
-                await self.save_snippet_word(part, word_id, i, snippet_type, snippet_id)
-
-    async def save_word_translations(self, word_id: int, translations: list, target_lang_id: int):
-        existing_translation_result = await self.db.execute(
-            select(Translation).where(
-                Translation.word_id == word_id,
-                Translation.language_id == target_lang_id
-            )
-        )
-        existing_translation = existing_translation_result.scalars().first()
-        if existing_translation:
-            return
-
-        for text in translations:
-            stmt = insert(Translation).values(
-                text=text,
-                word_id=word_id,
-                language_id=target_lang_id,
-            ).on_conflict_do_nothing(
-                index_elements=["word_id", "language_id", "text"]
-            )
-            await self.db.execute(stmt)
-
-        await self.db.commit()
 
     async def save_word(self, data: object, source_lang_id: int) -> int:
         existing_word = await self.get_word_by_text_and_lang(data["word"], source_lang_id)

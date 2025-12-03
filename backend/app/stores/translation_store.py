@@ -38,6 +38,29 @@ class TranslationStore:
         )
         return result.scalars().first()
 
+    async def save_word_translations(self, word_id: int, translations: list, target_lang_id: int):
+        existing_translation_result = await self.db.execute(
+            select(Translation).where(
+                Translation.word_id == word_id,
+                Translation.language_id == target_lang_id
+            )
+        )
+        existing_translation = existing_translation_result.scalars().first()
+        if existing_translation:
+            return
+
+        for text in translations:
+            stmt = insert(Translation).values(
+                text=text,
+                word_id=word_id,
+                language_id=target_lang_id,
+            ).on_conflict_do_nothing(
+                index_elements=["word_id", "language_id", "text"]
+            )
+            await self.db.execute(stmt)
+
+        await self.db.commit()
+
     async def save_snippet_translation(self, text: str, snippet_id: int, target_lang: Language) -> SnippetTranslation:
         existing_snippet_translation = await self.get_snippet_translation_by_lang(snippet_id, target_lang.id)
         if existing_snippet_translation:
@@ -64,7 +87,15 @@ class TranslationStore:
         video = await self.video_store.get_video_by_id(ts_snippet.video_id)
         source_lang = video.language
 
-        await self.word_store.save_snippet_words(data["word_parts"], SnippetType.TRANSCRIPT, ts_snippet.id, source_lang.id, target_lang.id)
+        existing_ts_snippet_words = await self.word_store.get_snippet_words(SnippetType.TRANSCRIPT, ts_snippet.id)
+
+        for i, part in enumerate(data["word_parts"]):
+            word_id = await self.word_store.save_word(part, source_lang.id)
+
+            await self.save_word_translations(word_id, part["translations"], target_lang.id)
+
+            if not existing_ts_snippet_words:
+                await self.word_store.save_snippet_word(part, word_id, i, SnippetType.TRANSCRIPT, ts_snippet.id)
         
         snippet_translation_id = await self.save_snippet_translation(data["translation"], ts_snippet.snippet_id, target_lang)
         return snippet_translation_id

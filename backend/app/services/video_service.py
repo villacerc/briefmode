@@ -1,4 +1,4 @@
-from app.stores import VideoStore, LanguageStore
+from app.stores import VideoStore, LanguageStore, SnippetStore
 from youtube_transcript_api import YouTubeTranscriptApi
 from models import Video
 import os
@@ -7,6 +7,7 @@ import httpx
 class VideoService:
     def __init__(self, db):
         self.video_store = VideoStore(db)
+        self.snippet_store = SnippetStore(db)
         self.language_store = LanguageStore(db)
         self.ytt_api = YouTubeTranscriptApi()
         self.google_api_key = os.getenv("GOOGLE_YT_DATA_API_KEY")
@@ -63,7 +64,8 @@ class VideoService:
         
     async def fetch_transcript_snippets(self, source_id: str):
         # Check transcript in DB
-        transcript_snippets = await self.video_store.get_transcript_snippets(source_id)
+        video = await self.video_store.get_video_by_source_id(source_id)
+        transcript_snippets = await self.snippet_store.get_ts_snippets_by_video_id(video.id)
         if transcript_snippets:
             return transcript_snippets
 
@@ -80,5 +82,5 @@ class VideoService:
         language = await self.language_store.get_lang_by_id(language_id)
 
         # Persist new video + transcript
-        await self.video_store.save_transcript_snippets(source_id, language, transcript_data)
-        return await self.video_store.get_transcript_snippets(source_id)
+        await self.snippet_store.save_ts_snippets(video.id, language, transcript_data)
+        return await self.snippet_store.get_ts_snippets_by_video_id(video.id)
