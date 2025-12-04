@@ -94,7 +94,7 @@ class TranslationStore:
         return snippet_translation_id
 
     async def save_ai_ts_snippet_translation(self, ts_snippet: TranscriptSnippet, target_lang: Language, data: dict) -> SnippetTranslation:
-        video = await self.video_store.get_video_by_id(ts_snippet.video_id)
+        video = await self.video_store.get_video_by_id(ts_snippet.video_id, eager_load=True)
         source_lang = video.language
 
         await self.save_snippet_words_and_translations(data["word_parts"], SnippetType.TRANSCRIPT, ts_snippet.id, source_lang, target_lang)

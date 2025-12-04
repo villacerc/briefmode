@@ -28,7 +28,7 @@ class TranslationService:
     
     async def get_normalized_ts_translated_snippet(self, ts_snippet: TranscriptSnippet, target_lang: Language) -> Dict:
         try:
-            video = await self.video_store.get_video_by_id(ts_snippet.video_id)
+            video = await self.video_store.get_video_by_id(ts_snippet.video_id, eager_load=True)
             snippet_translation = await self.translation_store.get_snippet_translation_by_lang(ts_snippet.snippet_id, target_lang.id)
             snippet_words = await self.word_store.get_snippet_words(SnippetType.TRANSCRIPT, ts_snippet.id)
             word_translations = [

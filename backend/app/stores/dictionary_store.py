@@ -7,7 +7,7 @@ from .snippet_store import SnippetStore
 from app.services.ai_service import AIService
 from typing import List
 
-DICTIONARY_POS_LOAD_OPTIONS = (
+DICTIONARY_POS_QUERY_OPTIONS = (
     selectinload(DictionaryPOS.snippet)
         .selectinload(Snippet.snippet_words)
         .selectinload(SnippetWord.word),
@@ -27,7 +27,7 @@ class DictionaryStore:
     async def get_dictionary_pos_by_id(self, pos_id: int, eager_load: bool = False) -> List[DictionaryPOS]:
         query = select(DictionaryPOS).where(DictionaryPOS.id == pos_id)
         if eager_load:
-            query = query.options(*DICTIONARY_POS_LOAD_OPTIONS)
+            query = query.options(*DICTIONARY_POS_QUERY_OPTIONS)
 
         result = await self.db.execute(query)
         return result.scalars().first()
@@ -38,7 +38,7 @@ class DictionaryStore:
             DictionaryPOS.language_id == target_lang_id
         )
         if eager_load:
-            query = query.options(*DICTIONARY_POS_LOAD_OPTIONS)
+            query = query.options(*DICTIONARY_POS_QUERY_OPTIONS)
 
         result = await self.db.execute(query)
         return result.scalars().all()

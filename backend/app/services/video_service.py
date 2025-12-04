@@ -41,14 +41,14 @@ class VideoService:
                 "title": title,
                 "language_id": language.id
             })
-            video = await self.video_store.get_video_by_id(video_id)
+            video = await self.video_store.get_video_by_id(video_id, eager_load=True)
 
             return video
         except Exception as e:
             raise RuntimeError(f"Error occurred while attempting to fetch YouTube video info. {e}")
     
     async def get_video_data(self, source_id: str):
-        video = await self.video_store.get_video_by_source_id(source_id)
+        video = await self.video_store.get_video_by_source_id(source_id, eager_load=True)
         if video:
             return self.get_normalized_video_data(video)
 
@@ -65,7 +65,7 @@ class VideoService:
     async def fetch_transcript_snippets(self, source_id: str):
         # Check transcript in DB
         video = await self.video_store.get_video_by_source_id(source_id)
-        transcript_snippets = await self.snippet_store.get_ts_snippets_by_video_id(video.id)
+        transcript_snippets = await self.snippet_store.get_ts_snippets_by_video_id(video.id, eager_load=True)
         if transcript_snippets:
             return transcript_snippets
 
@@ -83,4 +83,4 @@ class VideoService:
 
         # Persist new video + transcript
         await self.snippet_store.save_ts_snippets(video.id, language, transcript_data)
-        return await self.snippet_store.get_ts_snippets_by_video_id(video.id)
+        return await self.snippet_store.get_ts_snippets_by_video_id(video.id, eager_load=True)
