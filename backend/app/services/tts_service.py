@@ -14,7 +14,7 @@ class TTSService:
     async def get_word_tts_audio(self, word_id: int) -> str:
         try:
             # check if TTS audio already exists in DB
-            word = await self.word_store.get_word_by_id(word_id)
+            word = await self.word_store.get_word_by_id(word_id, eager_load=True)
             if not word:
                 raise ValueError(f"Word with id {word_id} not found")
             if word.tts_audio:

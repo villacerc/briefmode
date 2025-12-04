@@ -8,29 +8,40 @@ class WordStore:
     def __init__(self, db: Session):
         self.db = db
 
-    async def get_snippet_words(self, snippet_type: SnippetType, snippet_id: int) -> list:
+    async def get_snippet_words(self, snippet_type: SnippetType, snippet_id: int, eager_load: bool = False) -> list:
         if snippet_type == SnippetType.POS_EXAMPLE:
             query = select(SnippetWord).where(SnippetWord.snippet_id == snippet_id).order_by(SnippetWord.order_index)
         else:
             query = select(SnippetWord).where(SnippetWord.transcript_snippet_id == snippet_id).order_by(SnippetWord.order_index)
+        if eager_load:
+            query = query.options(
+                selectinload(SnippetWord.word)
+                .selectinload(Word.language),
+                selectinload(SnippetWord.snippet),
+                selectinload(SnippetWord.transcript_snippet)
+            )
+
         result = await self.db.execute(query)
         return result.scalars().all()
 
-    async def get_word_by_id(self, word_id: int) -> Word:
-        result = await self.db.execute(
-            select(Word).where(Word.id == word_id).options(selectinload(Word.language))
-        )
+    async def get_word_by_id(self, word_id: int, eager_load: bool = False) -> Word:
+        query = select(Word).where(Word.id == word_id)
+        if eager_load:
+            query = query.options(selectinload(Word.language))
+
+        result = await self.db.execute(query)
         return result.scalars().first()
 
-    async def get_word_by_text_and_lang(self, word_text: str, source_lang_id: int) -> Word:
+    async def get_word_by_text_and_lang(self, word_text: str, source_lang_id: int, eager_load: bool = False) -> Word:
         word_sanitized = sanitize_word(word_text)
-        result = await self.db.execute(
-            select(Word).where(
-                Word.text == word_sanitized,
-                Word.language_id == source_lang_id
-            )
-            .options(selectinload(Word.language))
+        query = select(Word).where(
+            Word.text == word_sanitized,
+            Word.language_id == source_lang_id
         )
+        if eager_load:
+            query = query.options(selectinload(Word.language))
+
+        result = await self.db.execute(query)
         return result.scalars().first()
 
     async def save_snippet_word(self, data: object, word_id: int, index: int, snippet_type: SnippetType, snippet_id: int):

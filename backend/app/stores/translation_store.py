@@ -14,39 +14,48 @@ class TranslationStore:
         self.word_store = WordStore(db)
         self.video_store = VideoStore(db)
 
-    async def get_word_translations_by_lang(self, word_id: int, lang_id: int) -> List[WordTranslation]:
-        result = await self.db.execute(
-            select(WordTranslation).where(
+    async def get_word_translations_by_lang(self, word_id: int, lang_id: int, eager_load: bool = False) -> List[WordTranslation]:
+        query = select(WordTranslation).where(
                 WordTranslation.word_id == word_id,
                 WordTranslation.language_id == lang_id
             )
-        )
+        if eager_load:
+            query = query.options(
+                selectinload(WordTranslation.language),
+                selectinload(WordTranslation.word)
+            )
+
+        result = await self.db.execute(query)
         return result.scalars().all()
 
-    async def get_snippet_translation_by_lang(self, snippet_id: int, lang_id: int) -> SnippetTranslation:
-        result = await self.db.execute(
-            select(SnippetTranslation).filter(
+    async def get_snippet_translation_by_lang(self, snippet_id: int, lang_id: int, eager_load: bool = False) -> SnippetTranslation:
+        query = select(SnippetTranslation).filter(
                 SnippetTranslation.snippet_id == snippet_id,
                 SnippetTranslation.language_id == lang_id
             )
-        )
+        if eager_load:
+            query = query.options(
+                selectinload(SnippetTranslation.language),
+                selectinload(SnippetTranslation.snippet)
+            )
+
+        result = await self.db.execute(query)
         return result.scalars().first()
         
-    async def get_snippet_translation_by_id(self, snippet_translation_id: int) -> SnippetTranslation:
-        result = await self.db.execute(
-            select(SnippetTranslation).where(SnippetTranslation.id == snippet_translation_id)
-        )
+    async def get_snippet_translation_by_id(self, snippet_translation_id: int, eager_load: bool = False) -> SnippetTranslation:
+        query = select(SnippetTranslation).where(SnippetTranslation.id == snippet_translation_id)
+        if eager_load:
+            query = query.options(
+                selectinload(SnippetTranslation.language),
+                selectinload(SnippetTranslation.snippet)
+            )
+
+        result = await self.db.execute(query)
         return result.scalars().first()
 
     async def save_word_translations(self, word_id: int, translations: list, target_lang_id: int):
-        existing_translation_result = await self.db.execute(
-            select(WordTranslation).where(
-                WordTranslation.word_id == word_id,
-                WordTranslation.language_id == target_lang_id
-            )
-        )
-        existing_translation = existing_translation_result.scalars().first()
-        if existing_translation:
+        existing_translations = await self.get_word_translations_by_lang(word_id, target_lang_id)
+        if existing_translations:
             return
 
         for text in translations:

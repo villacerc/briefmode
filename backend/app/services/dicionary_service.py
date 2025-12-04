@@ -113,8 +113,7 @@ class DictionaryService:
 
     async def get_word_dictionary(self, text: str, source_lang: Language, target_lang: Language):
         try:
-            word = await self.word_store.get_word_by_text_and_lang(text, source_lang.id)
-
+            word = await self.word_store.get_word_by_text_and_lang(text, source_lang.id, eager_load=True)
             if word:
                 # check if POS exists for this word in target language
                 dictionary_pos_list = await self.dictionary_store.get_word_dictionary_pos_list_by_lang(word.id, target_lang.id, eager_load=True)
@@ -146,7 +145,7 @@ class DictionaryService:
                 source_lang,
                 target_lang
             )
-            word = await self.word_store.get_word_by_id(word_id)
+            word = await self.word_store.get_word_by_id(word_id, eager_load=True)
             dictionary_pos_list = await self.dictionary_store.get_word_dictionary_pos_list_by_lang(word.id, target_lang.id, eager_load=True)
 
             return await self.get_normalized_word_dictionary_entry(word, dictionary_pos_list, target_lang)
