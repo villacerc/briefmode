@@ -117,7 +117,7 @@ class DictionaryService:
 
             if word:
                 # check if POS exists for this word in target language
-                dictionary_pos_list = await self.dictionary_store.get_word_dictionary_pos_list_by_lang(word.id, target_lang.id)
+                dictionary_pos_list = await self.dictionary_store.get_word_dictionary_pos_list_by_lang(word.id, target_lang.id, eager_load=True)
                 if dictionary_pos_list:
                     return await self.get_normalized_word_dictionary_entry(word, dictionary_pos_list, target_lang)
                 else:
@@ -133,7 +133,7 @@ class DictionaryService:
                         source_lang,
                         target_lang
                     )
-                    dictionary_pos_list = await self.dictionary_store.get_word_dictionary_pos_list_by_lang(word.id, target_lang.id)
+                    dictionary_pos_list = await self.dictionary_store.get_word_dictionary_pos_list_by_lang(word.id, target_lang.id, eager_load=True)
                     return await self.get_normalized_word_dictionary_entry(word, dictionary_pos_list, target_lang)
             
             dictionary_entry = await self.ai_service.fetch_ai_dictionary_entry(
@@ -147,7 +147,7 @@ class DictionaryService:
                 target_lang
             )
             word = await self.word_store.get_word_by_id(word_id)
-            dictionary_pos_list = await self.dictionary_store.get_word_dictionary_pos_list_by_lang(word.id, target_lang.id)
+            dictionary_pos_list = await self.dictionary_store.get_word_dictionary_pos_list_by_lang(word.id, target_lang.id, eager_load=True)
 
             return await self.get_normalized_word_dictionary_entry(word, dictionary_pos_list, target_lang)
         except Exception as e:

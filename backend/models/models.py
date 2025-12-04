@@ -90,7 +90,7 @@ class DictionaryPOS(Base):
     created_at = Column(DateTime, server_default=func.now())
     
     language = relationship("Language", back_populates="dictionary_pos_list")
-    snippet = relationship("Snippet", back_populates="dictionary_pos_list", lazy="selectin")
+    snippet = relationship("Snippet", back_populates="dictionary_pos_list")
     word = relationship("Word", back_populates="dictionary_pos_list")
 
     __table_args__ = (

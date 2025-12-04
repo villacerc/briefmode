@@ -7,6 +7,15 @@ from .snippet_store import SnippetStore
 from app.services.ai_service import AIService
 from typing import List
 
+DICTIONARY_POS_LOAD_OPTIONS = (
+    selectinload(DictionaryPOS.snippet)
+        .selectinload(Snippet.snippet_words)
+        .selectinload(SnippetWord.word),
+    selectinload(DictionaryPOS.word)
+        .selectinload(Word.language),
+    selectinload(DictionaryPOS.language)
+)
+
 class DictionaryStore:
     def __init__(self, db: Session):
         self.db = db
@@ -15,35 +24,23 @@ class DictionaryStore:
         self.snippet_store = SnippetStore(db)
         self.ai_service = AIService()
 
-    async def get_dictionary_pos_by_id(self, pos_id: int) -> List[DictionaryPOS]:
-        result = await self.db.execute(
-            select(DictionaryPOS).where(
-                DictionaryPOS.id == pos_id
-            )
-            .options(
-                selectinload(DictionaryPOS.snippet)
-                .selectinload(Snippet.snippet_words)
-                .selectinload(SnippetWord.word),
-                selectinload(DictionaryPOS.word)   
-                .selectinload(Word.language)
-            )
-        )
+    async def get_dictionary_pos_by_id(self, pos_id: int, eager_load: bool = False) -> List[DictionaryPOS]:
+        query = select(DictionaryPOS).where(DictionaryPOS.id == pos_id)
+        if eager_load:
+            query = query.options(*DICTIONARY_POS_LOAD_OPTIONS)
+
+        result = await self.db.execute(query)
         return result.scalars().first()
 
-    async def get_word_dictionary_pos_list_by_lang(self, word_id: int, target_lang_id: int) -> List[DictionaryPOS]:
-        result = await self.db.execute(
-            select(DictionaryPOS).where(
-                DictionaryPOS.word_id == word_id,
-                DictionaryPOS.language_id == target_lang_id
-            )
-            .options(
-                selectinload(DictionaryPOS.snippet)
-                .selectinload(Snippet.snippet_words)
-                .selectinload(SnippetWord.word),
-                selectinload(DictionaryPOS.word)   
-                .selectinload(Word.language)
-            )
+    async def get_word_dictionary_pos_list_by_lang(self, word_id: int, target_lang_id: int, eager_load: bool = False) -> List[DictionaryPOS]:
+        query = select(DictionaryPOS).where(
+            DictionaryPOS.word_id == word_id,
+            DictionaryPOS.language_id == target_lang_id
         )
+        if eager_load:
+            query = query.options(*DICTIONARY_POS_LOAD_OPTIONS)
+
+        result = await self.db.execute(query)
         return result.scalars().all()
 
     async def save_word_dictionary_entry(self, data: dict, source_lang: Language, target_lang: Language) -> int:
