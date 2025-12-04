@@ -142,15 +142,15 @@ class Word(Base):
 
     language = relationship("Language", back_populates="words")
     snippet_words = relationship("SnippetWord", back_populates="word")
-    translations = relationship("Translation", back_populates="word", cascade="all, delete-orphan")
+    word_translations = relationship("WordTranslation", back_populates="word", cascade="all, delete-orphan")
     dictionary_pos_list = relationship("DictionaryPOS", back_populates="word", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("ix_word_text_lang", "text", "language_id", unique=True),
     )
 
-class Translation(Base):
-    __tablename__ = "translations"
+class WordTranslation(Base):
+    __tablename__ = "word_translations"
 
     id = Column(Integer, primary_key=True)
     word_id = Column(Integer, ForeignKey("words.id", ondelete="CASCADE"), nullable=False)
@@ -159,8 +159,8 @@ class Translation(Base):
     
     created_at = Column(DateTime, server_default=func.now())
 
-    word = relationship("Word", back_populates="translations")
-    language = relationship("Language", back_populates="translations")
+    word = relationship("Word", back_populates="word_translations")
+    language = relationship("Language", back_populates="word_translations")
 
     __table_args__ = (
         Index("ix_translation_word_lang", "word_id", "language_id"),
@@ -180,5 +180,5 @@ class Language(Base):
     dictionary_pos_list = relationship("DictionaryPOS", back_populates="language")
     snippet_translations = relationship("SnippetTranslation", back_populates="language")
     words = relationship("Word", back_populates="language")
-    translations = relationship("Translation", back_populates="language")
+    word_translations = relationship("WordTranslation", back_populates="language")
     videos = relationship("Video", back_populates="language")

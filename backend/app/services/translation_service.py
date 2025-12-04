@@ -1,5 +1,5 @@
 # app/services/translation_service.py
-from models import TranscriptSnippet, Language, Word, Translation, Video, SnippetType
+from models import TranscriptSnippet, Language, Word, Video, SnippetType
 from app.stores import TranslationStore, VideoStore, WordStore, SnippetStore
 from .ai_service import AIService
 from typing import List, Dict

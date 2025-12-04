@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
-from models import Word, Translation, SnippetType, SnippetWord
+from models import Word, SnippetType, SnippetWord
 from app.utils.helpers import sanitize_word, is_latin_script
 
 class WordStore:
