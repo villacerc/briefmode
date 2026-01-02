@@ -14,6 +14,8 @@ class JSONService():
                 return self.validate_interpretation_json
             case AIPromptType.SNIPPET_TRANSLATION:
                 return self.validate_translation_json
+            case AIPromptType.SNIPPET_WORDS_TRANSLATION:
+                return self.validate_snippet_words_translation_json
             case _:
                 raise ValueError(f"Unsupported prompt type for json validation: {prompt_type}")
   
@@ -160,6 +162,51 @@ class JSONService():
                 )
 
             # Validate translations list
+            translations = part["translations"]
+            if not isinstance(translations, list):
+                raise ValueError(f"word_parts[{i}]['translations'] must be a list")
+
+            for j, t in enumerate(translations, start=1):
+                if not isinstance(t, str):
+                    raise ValueError(
+                        f"word_parts[{i}]['translations'][{j}] must be a string"
+                    )
+
+    def validate_snippet_words_translation_json(self, data: dict) -> None:
+        """
+        Validates the structure and content of the translation prompt JSON.
+        Raises ValueError if something is invalid.
+        """
+
+        # Required top-level keys
+        required_keys = ("snippet_text", "translation", "word_parts")
+        for key in required_keys:
+            if key not in data:
+                raise ValueError(f"Missing required key: '{key}'")
+
+        if not isinstance(data["snippet_text"], str):
+            raise ValueError("'snippet_text' must be a string")
+
+        if not isinstance(data["translation"], str):
+            raise ValueError("'translation' must be a string")
+
+        if not isinstance(data["word_parts"], list):
+            raise ValueError("'word_parts' must be a list")
+
+        for i, part in enumerate(data["word_parts"], start=1):
+            if not isinstance(part, dict):
+                raise ValueError(f"word_parts[{i}] must be an object")
+
+            # Required keys per word part
+            for key in ("word", "translations"):
+                if key not in part:
+                    raise ValueError(f"word_parts[{i}] is missing key '{key}'")
+
+            # Validate word
+            if not isinstance(part["word"], str):
+                raise ValueError(f"word_parts[{i}]['word'] must be a string")
+
+            # Validate translations
             translations = part["translations"]
             if not isinstance(translations, list):
                 raise ValueError(f"word_parts[{i}]['translations'] must be a list")

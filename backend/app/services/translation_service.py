@@ -20,7 +20,11 @@ class TranslationService:
             return await self.get_normalized_ts_translated_snippet(ts_snippet, target_lang)
 
         snippet = await self.snippet_store.get_snippet_by_id(ts_snippet.snippet_id)
-        parsed_json = await self.ai_service.fetch_ai_data(AIPromptType.SNIPPET_TRANSLATION, {"text": snippet.text, "target_lang_name": target_lang.name})
+        if snippet.snippet_words:
+            snippet_words = [w.text for w in snippet.snippet_words]
+            parsed_json = await self.ai_service.fetch_ai_data(AIPromptType.SNIPPET_WORDS_TRANSLATION, {"snippet_text": snippet.text, "snippet_words": snippet_words, "target_lang_name": target_lang.name})
+        else:
+            parsed_json = await self.ai_service.fetch_ai_data(AIPromptType.SNIPPET_TRANSLATION, {"text": snippet.text, "target_lang_name": target_lang.name})
 
         await self.translation_store.save_ai_ts_snippet_translation(ts_snippet, target_lang, parsed_json)
 

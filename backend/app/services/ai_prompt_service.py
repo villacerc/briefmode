@@ -11,6 +11,8 @@ class AIPromptService:
                 return self.generate_ai_dictionary_entry_prompt(params)
             case AIPromptType.TEXT_INTERPRETATION:
                 return self.generate_ai_text_interpretation_prompt(params)
+            case AIPromptType.SNIPPET_WORDS_TRANSLATION:
+                return self.generate_ai_snippet_words_translation_prompt(params)
             case _:
                 raise ValueError(f"Unsupported prompt type: {prompt_type}")
 
@@ -126,4 +128,30 @@ class AIPromptService:
                 }}
 
                 Input: {params["text"]}
+                """
+    
+    def generate_ai_snippet_words_translation_prompt(self, params: dict) -> str:
+        return f"""
+                Translate the list of snippet words below to {params["target_lang_name"]}.
+
+                Rules:
+                1. Respond ONLY with valid JSON. Do NOT include explanations, comments, or extra text.
+                2. Provide at least three translation candidates for each word if possible.
+                3. Use properly formatted JSON: double quotes, no trailing commas.
+
+                Output JSON format:
+                {{
+                "snippet_text": "<the full original snippet text>",
+                "translation": "<fully translated snippet text here otherwise original text if already translated>",
+                "word_parts": [
+                    {{  
+                    "word": "<original word>",
+                    "translations": "<list of at least three translation candidates for each word if possible.>"
+                    }}
+                ]
+                }}
+
+                Input:
+                "snippet_text": "{params["snippet_text"]}"
+                "snippet_words": {params["snippet_words"]}
                 """

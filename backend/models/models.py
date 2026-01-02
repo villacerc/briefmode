@@ -8,6 +8,7 @@ class AIPromptType(enum.Enum):
     DICTIONARY_ENTRY = "dictionary_entry"
     DICTIONARY_POS = "dictionary_pos"
     TEXT_INTERPRETATION = "text_interpretation"
+    SNIPPET_WORDS_TRANSLATION = "snippet_words_translation"
 
 class SnippetType(enum.Enum):
     TRANSCRIPT = "transcript"

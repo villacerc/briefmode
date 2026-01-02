@@ -150,7 +150,13 @@ class DictionaryService:
     
             snippet_translation = await self.translation_store.get_snippet_translation_by_lang(snippet_id, target_lang.id)
             if snippet_translation is None:
-                ai_data = await self.ai_service.fetch_ai_data(AIPromptType.SNIPPET_TRANSLATION, {"text": text, "target_lang_name": target_lang.name})
+                snippet = await self.snippet_store.get_snippet_by_id(snippet_id)
+                if snippet.snippet_words:
+                    snippet_words = [w.text for w in snippet.snippet_words]
+                    ai_data = await self.ai_service.fetch_ai_data(AIPromptType.SNIPPET_WORDS_TRANSLATION, {"snippet_text": snippet.text, "snippet_words": snippet_words, "target_lang_name": target_lang.name})
+                else:
+                    ai_data = await self.ai_service.fetch_ai_data(AIPromptType.SNIPPET_TRANSLATION, {"text": text, "target_lang_name": target_lang.name})
+    
                 snippet_translation_id = await self.translation_store.save_ai_snippet_translation(snippet_id, source_lang, target_lang, ai_data)
                 snippet_translation = await self.translation_store.get_snippet_translation_by_id(snippet_translation_id)
 
