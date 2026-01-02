@@ -1,5 +1,5 @@
 from app.stores import LanguageStore, TranslationStore, DictionaryStore, WordStore, SnippetStore
-from models import Language, DictionaryPOS, Word
+from models import Language, DictionaryPOS, Word, AIPromptType
 from .ai_service import AIService
 from app.utils.helpers import is_single_word
 from typing import List
@@ -35,7 +35,7 @@ class DictionaryService:
                     )
                     return response
                 
-                interpretation = await self.ai_service.fetch_ai_text_interpretation(text)
+                interpretation = await self.ai_service.fetch_ai_data(AIPromptType.TEXT_INTERPRETATION, {"text": text})
                 if not interpretation["is_interpretable"]:
                     return response
                 
@@ -57,7 +57,7 @@ class DictionaryService:
                     target_lang
                 )
             
-            interpretation = await self.ai_service.fetch_ai_text_interpretation(text)
+            interpretation = await self.ai_service.fetch_ai_data(AIPromptType.TEXT_INTERPRETATION, {"text": text})
             if not interpretation["is_interpretable"]:
                 return response
             
@@ -121,11 +121,7 @@ class DictionaryService:
                     return await self.get_normalized_word_dictionary_entry(word, dictionary_pos_list, target_lang)
                 else:
                     # fetch POS from AI and save
-                    dictionary_pos_data = await self.ai_service.fetch_ai_dictionary_pos(
-                        text,
-                        source_lang,
-                        target_lang
-                    )
+                    dictionary_pos_data = await self.ai_service.fetch_ai_data(AIPromptType.DICTIONARY_POS, {"text": text, "source_lang_name": source_lang.name, "target_lang_name": target_lang.name})
                     await self.dictionary_store.save_word_pos_list(
                         word.id,
                         dictionary_pos_data,
@@ -135,11 +131,7 @@ class DictionaryService:
                     dictionary_pos_list = await self.dictionary_store.get_word_dictionary_pos_list_by_lang(word.id, target_lang.id, eager_load=True)
                     return await self.get_normalized_word_dictionary_entry(word, dictionary_pos_list, target_lang)
             
-            dictionary_entry = await self.ai_service.fetch_ai_dictionary_entry(
-                text,
-                source_lang,
-                target_lang
-            )
+            dictionary_entry = await self.ai_service.fetch_ai_data(AIPromptType.DICTIONARY_ENTRY, {"text": text, "source_lang_name": source_lang.name, "target_lang_name": target_lang.name})
             word_id = await self.dictionary_store.save_word_dictionary_entry(
                 dictionary_entry,
                 source_lang,
@@ -158,7 +150,7 @@ class DictionaryService:
     
             snippet_translation = await self.translation_store.get_snippet_translation_by_lang(snippet_id, target_lang.id)
             if snippet_translation is None:
-                ai_data = await self.ai_service.fetch_ai_snippet_translation(text, target_lang)
+                ai_data = await self.ai_service.fetch_ai_data(AIPromptType.SNIPPET_TRANSLATION, {"text": text, "target_lang_name": target_lang.name})
                 snippet_translation_id = await self.translation_store.save_ai_snippet_translation(snippet_id, source_lang, target_lang, ai_data)
                 snippet_translation = await self.translation_store.get_snippet_translation_by_id(snippet_translation_id)
 

@@ -3,6 +3,12 @@ from sqlalchemy.orm import relationship
 from database import Base
 import enum
 
+class AIPromptType(enum.Enum):
+    SNIPPET_TRANSLATION = "snippet_translation"
+    DICTIONARY_ENTRY = "dictionary_entry"
+    DICTIONARY_POS = "dictionary_pos"
+    TEXT_INTERPRETATION = "text_interpretation"
+
 class SnippetType(enum.Enum):
     TRANSCRIPT = "transcript"
     POS_EXAMPLE = "pos_example"

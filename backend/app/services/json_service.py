@@ -1,8 +1,22 @@
 import re
 import regex
 from app.utils.helpers import is_latin_script
+from models import AIPromptType
 
-class JSONService():  
+class JSONService():
+    def get_validator_callback(self, prompt_type):
+        match prompt_type:
+            case AIPromptType.DICTIONARY_ENTRY:
+                return self.validate_dictionary_entry_json
+            case AIPromptType.DICTIONARY_POS:
+                return self.validate_dictionary_pos_json
+            case AIPromptType.TEXT_INTERPRETATION:
+                return self.validate_interpretation_json
+            case AIPromptType.SNIPPET_TRANSLATION:
+                return self.validate_translation_json
+            case _:
+                raise ValueError(f"Unsupported prompt type for json validation: {prompt_type}")
+  
     def validate_dictionary_pos_json(self, data: dict) -> None:
         """
         Validates the structure and content of the data part-of-speech entry JSON.

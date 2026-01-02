@@ -1,5 +1,5 @@
 # app/services/translation_service.py
-from models import TranscriptSnippet, Language, Word, Video, SnippetType
+from models import TranscriptSnippet, Language, Word, Video, SnippetType, AIPromptType
 from app.stores import TranslationStore, VideoStore, WordStore, SnippetStore
 from .ai_service import AIService
 from typing import List, Dict
@@ -20,7 +20,7 @@ class TranslationService:
             return await self.get_normalized_ts_translated_snippet(ts_snippet, target_lang)
 
         snippet = await self.snippet_store.get_snippet_by_id(ts_snippet.snippet_id)
-        parsed_json = await self.ai_service.fetch_ai_snippet_translation(snippet.text, target_lang)
+        parsed_json = await self.ai_service.fetch_ai_data(AIPromptType.SNIPPET_TRANSLATION, {"text": snippet.text, "target_lang_name": target_lang.name})
 
         await self.translation_store.save_ai_ts_snippet_translation(ts_snippet, target_lang, parsed_json)
 

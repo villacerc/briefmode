@@ -1,4 +1,4 @@
-from models import DictionaryPOS, Snippet, Word, SnippetTranslation, Language, SnippetWord
+from models import DictionaryPOS, Snippet, Word, SnippetTranslation, Language, SnippetWord, AIPromptType
 from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import select
 from .translation_store import TranslationStore
@@ -89,7 +89,7 @@ class DictionaryStore:
             dictionary_pos = await self.get_dictionary_pos_by_id(dictionary_pos_id)
             
             # Fetch and save example translation
-            translation_json = await self.ai_service.fetch_ai_snippet_translation(pos["example"], target_lang)
+            translation_json = await self.ai_service.fetch_ai_data(AIPromptType.SNIPPET_TRANSLATION, {"text": pos["example"], "target_lang_name": target_lang.name})
             await self.translation_store.save_ai_snippet_translation(dictionary_pos.snippet_id, source_lang, target_lang, translation_json)
 
         await self.db.commit()
