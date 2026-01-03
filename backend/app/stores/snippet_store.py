@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session, selectinload
 from models import Snippet, Language, TranscriptSnippet, SnippetWord, SnippetTranslation
-from app.utils.helpers import sanitize_snippet
+from app.utils.helpers import sanitize_snippet_text
 from sqlalchemy import select
 
 TRANSCRIPT_SNIPPET_QUERY_OPTIONS = (
@@ -15,9 +15,9 @@ class SnippetStore:
         self.db = db
 
     async def get_snippet(self, text: str, language: Language) -> Snippet:
-        snippet_sanitized = sanitize_snippet(text, language.code)
+        snippet_text_sanitized = sanitize_snippet_text(text, language.code)
         result = await self.db.execute(
-            select(Snippet).where(Snippet.text == snippet_sanitized)
+            select(Snippet).where(Snippet.text == snippet_text_sanitized)
         )
         return result.scalars().first()
 
@@ -82,7 +82,7 @@ class SnippetStore:
             return existing_snippet.id
 
         new_snippet = Snippet(
-            text=sanitize_snippet(text, source_lang.code)
+            text=sanitize_snippet_text(text, source_lang.code)
         )
         self.db.add(new_snippet)
         await self.db.commit()

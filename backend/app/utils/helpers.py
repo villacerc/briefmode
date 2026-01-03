@@ -37,7 +37,7 @@ def sanitize_word(word: str) -> str:
 
     return word
 
-def sanitize_snippet(text: str, lang: str = "en") -> str:
+def sanitize_snippet_text(text: str, lang: str = "en") -> str:
     # Unicode normalize + casefold
     text = unicodedata.normalize("NFC", text)
     text = text.casefold()
