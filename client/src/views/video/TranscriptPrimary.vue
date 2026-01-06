@@ -15,7 +15,7 @@
         languageUsesSpaces(snippet.target_lang_code) ? 'mr-1' : '',
       ]"
     >
-      <SnippetWords :words="snippet.snippet_words" />
+      <SnippetWords :snippet="snippet" />
     </span>
   </div>
   <div

@@ -1,6 +1,6 @@
 <template>
   <Popup
-    v-for="(word, j) in words"
+    v-for="(word, j) in snippet.snippet_words"
     :key="j"
     @click.stop="wordClicked(word.text)"
     class="cursor-pointer hover:bg-info hover:text-base-content rounded-sm px-1"
@@ -22,11 +22,14 @@
           <li class="font-bold mb-1">
             {{
               word.part_of_speech.charAt(0).toUpperCase() +
-              word.part_of_speech.slice(1) +
-              ":"
+              word.part_of_speech.slice(1)
             }}
           </li>
-          <li v-for="(t, i) in word.translations" :key="i">
+          <li
+            v-if="snippet.source_lang_code != snippet.target_lang_code"
+            v-for="(t, i) in word.translations"
+            :key="i"
+          >
             {{ t.text }}
           </li>
         </ul>
@@ -37,7 +40,7 @@
 
 <script setup lang="ts">
 import { defineProps } from "vue";
-import type { SnippetWord } from "../types.js";
+import type { TranslatedSnippet } from "../types.js";
 import Popup from "./Popup.vue";
 import { languageUsesSpaces, removeAnnotations } from "../utils/helpers.js";
 import { useSettingsStore } from "../stores/settingsStore.ts";
@@ -53,8 +56,8 @@ const wordClicked = (wordText: string) => {
 };
 
 const props = defineProps({
-  words: {
-    type: Array as () => SnippetWord[],
+  snippet: {
+    type: Object as () => TranslatedSnippet,
     required: true,
   },
 });
