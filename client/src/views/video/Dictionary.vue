@@ -27,7 +27,10 @@
     <!-- Dictionary Snippet Entry Section -->
     <div v-else-if="fetchingEntry === false && dictionarySnippetEntry !== null">
       <div class="bg-base-100 p-3 rounded-lg">
-        <SnippetWords :words="dictionarySnippetEntry.snippet_words" />
+        <SnippetWords
+          :words="dictionarySnippetEntry.snippet_words"
+          :sourceLangCode="dictionarySnippetEntry.source_lang_code"
+        />
       </div>
       <p class="px-4 py-2">
         {{ dictionarySnippetEntry.translation }}

@@ -17,7 +17,10 @@
             <p>{{ formatSnippetTime(snippet.start) }}</p>
           </div>
           <div class="p-4 rounded-2xl bg-base-100 shadow-sm">
-            <SnippetWords :snippet="snippet" />
+            <SnippetWords
+              :words="snippet.snippet_words"
+              :sourceLangCode="snippet.source_lang_code"
+            />
           </div>
         </div>
         <div class="p-2">
