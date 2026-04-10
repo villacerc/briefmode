@@ -31,7 +31,7 @@
         <div class="bg-base-100 p-3 rounded-lg">
           <SnippetWords
             :words="pos.example_words"
-            :sourceLangCode="props.entry.source_lang_code"
+            :sourceLangCode="entry.source_lang_code"
           />
         </div>
         <p class="px-5 py-2">
