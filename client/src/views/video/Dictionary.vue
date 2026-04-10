@@ -27,7 +27,10 @@
     <!-- Dictionary Snippet Entry Section -->
     <div v-else-if="fetchingEntry === false && dictionarySnippetEntry !== null">
       <div class="bg-base-100 p-3 rounded-lg">
-        <SnippetWords :words="dictionarySnippetEntry.snippet_words" />
+        <SnippetWords
+          :words="dictionarySnippetEntry.snippet_words"
+          :sourceLangCode="dictionarySnippetEntry.source_lang_code"
+        />
       </div>
       <p class="px-4 py-2">
         {{ dictionarySnippetEntry.translation }}
@@ -76,7 +79,7 @@ watch(
   (newWord) => {
     search.value = newWord;
     handleSearch();
-  }
+  },
 );
 
 const handleSearch = async () => {
@@ -109,7 +112,7 @@ const handleSearch = async () => {
 const fetchDictionaryEntry = async (word: string) => {
   try {
     const response = await fetch(
-      `http://localhost:8000/api/dictionary/${word}?source_lang_code=${settingsStore.videoInfo?.source_lang_code}&target_lang_code=${settingsStore.targetLangCode}`
+      `http://localhost:8000/api/dictionary/${word}?source_lang_code=${settingsStore.videoInfo?.source_lang_code}&target_lang_code=${settingsStore.targetLangCode}`,
     );
     if (!response.ok) throw new Error("Network response was not ok");
     const data = await response.json();

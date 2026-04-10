@@ -29,7 +29,10 @@
         <p class="mb-5">{{ pos.definition }}</p>
         <p class="mb-2 text-sm">EXAMPLE</p>
         <div class="bg-base-100 p-3 rounded-lg">
-          <SnippetWords :words="pos.example_words" />
+          <SnippetWords
+            :words="pos.example_words"
+            :sourceLangCode="props.entry.source_lang_code"
+          />
         </div>
         <p class="px-5 py-2">
           {{ pos.example_translation }}
@@ -46,7 +49,10 @@
           class="cursor-pointer relative group"
         >
           <p class="bg-base-100 p-3 rounded-lg">
-            <SnippetWords :words="snippet.snippet_words" />
+            <SnippetWords
+              :words="snippet.snippet_words"
+              :sourceLangCode="props.entry.source_lang_code"
+            />
           </p>
           <div class="absolute -left-3.5 top-1/2 translate-y-[-50%]">
             <i
@@ -92,14 +98,14 @@ onMounted(() => {
 
 const findSnippetExamples = () => {
   snippetExamples.value = props.snippets.filter((snippet) =>
-    snippet.text.toLowerCase().includes(props.entry.word.toLowerCase())
+    snippet.text.toLowerCase().includes(props.entry.word.toLowerCase()),
   );
 };
 
 const fetchTTS = async () => {
   try {
     const response = await fetch(
-      `http://localhost:8000/api/word_tts/${props.entry.word_id}`
+      `http://localhost:8000/api/word_tts/${props.entry.word_id}`,
     );
     if (!response.ok) throw new Error("Network response was not ok");
     const data = await response.json();

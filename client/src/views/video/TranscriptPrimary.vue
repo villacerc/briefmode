@@ -15,7 +15,10 @@
         languageUsesSpaces(snippet.target_lang_code) ? 'mr-1' : '',
       ]"
     >
-      <SnippetWords :snippet="snippet" />
+      <SnippetWords
+        :words="snippet.snippet_words"
+        :sourceLangCode="snippet.source_lang_code"
+      />
     </span>
   </div>
   <div
@@ -72,7 +75,7 @@ const visibleSnippets = computed<TranslatedSnippet[]>(() => {
     Math.floor(props.activeIndex / VISIBLE_LINES_SIZE) * VISIBLE_LINES_SIZE;
   const groupEnd = Math.min(
     groupStart + VISIBLE_LINES_SIZE,
-    props.snippets.length
+    props.snippets.length,
   );
 
   let group: TranslatedSnippet[] = [];
