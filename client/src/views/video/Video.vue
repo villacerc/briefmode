@@ -42,7 +42,7 @@
       </div>
     </div>
     <div
-      v-if="uiStore.dictionaryPanelOpen"
+      v-show="uiStore.dictionaryPanelOpen"
       class="absolute right-0 dictionary-container lg:relative lg:w-[500px] max-w-[500px] bg-dictionary flex flex-col shadow-sm rounded-xl"
     >
       <div class="flex-1 overflow-y-auto">
