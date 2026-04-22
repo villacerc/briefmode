@@ -9,7 +9,11 @@
       <div class="flex items-center mb-1">
         <p class="mr-5">{{ entry.phonetic_spelling }}</p>
         <button @click="playTTS" class="btn-circle inline-block">
-          <i class="mui-icon-fill text-2xl text-neutral">volume_up</i>
+          <span
+            v-if="fetchingTTS"
+            className="loading loading-spinner text-neutral"
+          ></span>
+          <i v-else class="mui-icon-fill text-2xl text-neutral">volume_up</i>
         </button>
       </div>
       <div class="border-t border-gray-400 w-full mb-2"></div>
@@ -80,6 +84,7 @@ import { base64ToBlob } from "../../utils/helpers";
 const eventStore = useEventStore();
 
 const snippetExamples = ref<TranslatedSnippet[]>([]);
+const fetchingTTS = ref(false);
 
 const props = defineProps({
   entry: {
@@ -98,14 +103,16 @@ onMounted(() => {
 
 const findSnippetExamples = () => {
   snippetExamples.value = props.snippets.filter((snippet) =>
-    snippet.text.toLowerCase().includes(props.entry.word.toLowerCase()),
+    snippet.text.toLowerCase().includes(props.entry.word.toLowerCase())
   );
 };
 
 const fetchTTS = async () => {
+  if (fetchingTTS.value) return;
   try {
+    fetchingTTS.value = true;
     const response = await fetch(
-      `http://localhost:8000/api/word_tts/${props.entry.word_id}`,
+      `http://localhost:8000/api/word_tts/${props.entry.word_id}`
     );
     if (!response.ok) throw new Error("Network response was not ok");
     const data = await response.json();
@@ -113,6 +120,8 @@ const fetchTTS = async () => {
   } catch (error) {
     console.error("Error fetching dictionary entry:", error);
     throw error;
+  } finally {
+    fetchingTTS.value = false;
   }
 };
 

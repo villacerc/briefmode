@@ -16,31 +16,42 @@ class DictionaryService:
 
     async def get_dictionary_entry(self, text: str, source_lang: Language, target_lang: Language):
         try:
-            is_word = is_single_word(text)
-
             response = {
                 "is_interpretable": False,
-                "is_word": is_word,
+                "is_word": False,
                 "data": None
             }
 
-            if is_word:
-                word = await self.word_store.get_word_by_text_and_lang(text, source_lang.id)
-                if word:
-                    response["is_interpretable"] = True
-                    response["data"] = await self.get_word_dictionary(
-                        word.text,
-                        source_lang,
-                        target_lang
-                    )
-                    return response
-                
-                interpretation = await self.ai_service.fetch_ai_data(AIPromptType.TEXT_INTERPRETATION, {"text": text})
-                if not interpretation["is_interpretable"]:
-                    return response
-                
-                source_lang = await self.language_store.get_lang_by_code(interpretation["language_code"])
+            existing_word = await self.word_store.get_word_by_text_and_lang(text, source_lang.id)
+            if existing_word:
                 response["is_interpretable"] = True
+                response["is_word"] = True
+                response["data"] = await self.get_word_dictionary(
+                    existing_word.text,
+                    source_lang,
+                    target_lang
+                )
+                return response
+            
+            existing_snippet = await self.snippet_store.get_snippet(text, source_lang)
+            if existing_snippet:
+                response["is_interpretable"] = True
+                response["data"] = await self.get_snippet_dictionary(
+                    existing_snippet.text,
+                    source_lang,
+                    target_lang
+                )
+                return response
+            
+            interpretation = await self.ai_service.fetch_ai_data(AIPromptType.TEXT_INTERPRETATION, {"text": text})
+            if not interpretation["is_interpretable"]:
+                return response
+            
+            response["is_interpretable"] = True
+            source_lang = await self.language_store.get_lang_by_code(interpretation["language_code"])
+
+            if interpretation["is_word"]:
+                response["is_word"] = True
                 response["data"] = await self.get_word_dictionary(
                     interpretation["normalized_text"],
                     source_lang,
@@ -48,27 +59,11 @@ class DictionaryService:
                 )
                 return response
             
-            snippet = await self.snippet_store.get_snippet(text, source_lang)
-            if snippet:
-                response["is_interpretable"] = True
-                response["data"] = await self.get_snippet_dictionary(
-                    snippet.text,
-                    source_lang,
-                    target_lang
-                )
-            
-            interpretation = await self.ai_service.fetch_ai_data(AIPromptType.TEXT_INTERPRETATION, {"text": text})
-            if not interpretation["is_interpretable"]:
-                return response
-            
-            source_lang = await self.language_store.get_lang_by_code(interpretation["language_code"])
-            response["is_interpretable"] = True
             response["data"] = await self.get_snippet_dictionary(
                 interpretation["normalized_text"],
                 source_lang,
                 target_lang
             )
-
             return response
         except Exception as e:
             raise RuntimeError(f"Error getting dictionary entry for '{text}'. {e}")

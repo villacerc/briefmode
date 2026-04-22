@@ -16,6 +16,10 @@
       </label>
     </div>
 
+    <div v-if="fetchingEntry" class="flex justify-center">
+      <span className="loading loading-spinner loading-lg"></span>
+    </div>
+
     <!-- Dictionary Word Entry Section -->
     <div v-if="fetchingEntry === false && dictionaryWordEntry !== null">
       <DictionaryWordContent
@@ -78,24 +82,26 @@ watch(
   () => eventStore.wordToLookup,
   (newWord) => {
     search.value = newWord;
-    handleSearch();
-  },
+    if (newWord) handleSearch();
+  }
 );
 
 const handleSearch = async () => {
-  fetchingEntry.value = true;
   clearTimeout(inputTimeout);
+  dictionaryWordEntry.value = null;
+  dictionarySnippetEntry.value = null;
+
+  if (search.value.trim() === "") {
+    eventStore.lookupWord("");
+    fetchingEntry.value = false;
+    return;
+  }
+
+  fetchingEntry.value = true;
+
   inputTimeout = setTimeout(async () => {
     try {
-      dictionaryWordEntry.value = null;
-      dictionarySnippetEntry.value = null;
-
-      const searchValue = search.value.trim();
-      if (searchValue === "") {
-        return;
-      }
-
-      const entry = await fetchDictionaryEntry(searchValue);
+      const entry = await fetchDictionaryEntry(search.value.trim());
       if (entry.is_interpretable && entry.is_word) {
         dictionaryWordEntry.value = entry.data as DictionaryWordEntry;
       } else if (entry.is_interpretable) {
@@ -112,7 +118,7 @@ const handleSearch = async () => {
 const fetchDictionaryEntry = async (word: string) => {
   try {
     const response = await fetch(
-      `http://localhost:8000/api/dictionary/${word}?source_lang_code=${settingsStore.videoInfo?.source_lang_code}&target_lang_code=${settingsStore.targetLangCode}`,
+      `http://localhost:8000/api/dictionary/${word}?source_lang_code=${settingsStore.videoInfo?.source_lang_code}&target_lang_code=${settingsStore.targetLangCode}`
     );
     if (!response.ok) throw new Error("Network response was not ok");
     const data = await response.json();
