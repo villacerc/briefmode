@@ -4,46 +4,49 @@
       <h1 class="text-accent-content text-5xl mb-2 text-center">
         YouTube Video AI Translator
       </h1>
-      <h2 class="text-accent-content text-center">
+      <h2 class="text-accent-content text-center mb-10 text-slate-400">
         Watch YouTube videos with accurate, context-aware translations.
       </h2>
-      <div class="m-auto max-w-3xl p-2">
-        <!-- Input + Button -->
-        <div class="flex flex-col sm:flex-row gap-2 h-[70px] p-2">
-          <div class="w-full">
-            <input
-              id="youtubeLink"
-              v-model="youtubeLink"
-              type="text"
-              placeholder="Paste YouTube Link"
-              class="w-full input input-neutral input-lg bg-gray-50"
-            />
-            <p v-if="showError" class="text-error text-xs mt-1">
-              Please enter a valid URL
-            </p>
-          </div>
-          <div class="relative w-full sm:w-auto">
-            <!-- Toggle dropdown on click -->
-            <button
-              @click="toggleDropdown"
-              :class="[
-                'btn btn-neutral sm:w-auto w-full btn-lg flex items-center justify-between',
-              ]"
+
+      <!-- Main Form -->
+      <div class="m-auto max-w-4xl p-8 shadow-sm rounded-xl bg-dictionary">
+        <div class="flex gap-5 flex-wrap">
+          <div class="flex-1 relative w-full md:flex-[3]">
+            <span
+              class="mui-icon text-xl absolute left-4 top-1/2 -translate-y-1/2 text-outline"
+              data-icon="link"
+              >link</span
             >
-              Translate
-              <!-- Solid triangle SVG -->
-              <svg
-                class="w-2 h-2 mt-1 transition-transform duration-200"
-                viewBox="0 0 10 6"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <polygon points="0,0 10,0 5,6" fill="currentColor" />
-              </svg>
-            </button>
-            <!-- Searchable dropdown -->
+            <input
+              type="text"
+              v-model="youtubeLink"
+              placeholder="Paste YouTube video URL here..."
+              class="w-full p-5 pl-11 rounded-md border bg-base-100 border-gray-300 focus:outline-none focus-within:border-neutral"
+            />
+          </div>
+          <!-- Custom Dropdown for Language Selection -->
+          <div
+            class="flex items-center w-full md:flex-[1] p-3 relative rounded-md border bg-base-100 border-gray-300 focus-within:border-neutral cursor-pointer"
+            @click="open = true"
+          >
+            <span
+              class="mui-icon text-xl absolute left-4 top-1/2 -translate-y-1/2"
+            >
+              translate
+            </span>
+            <div class="pl-8 pr-8">
+              {{ selectedLanguage?.name || "Target Language" }}
+            </div>
+            <span
+              class="mui-icon text-xl absolute right-4 pointer-events-none text-outline"
+            >
+              expand_more
+            </span>
+            <!-- Custom dropdown -->
             <div
               v-if="open"
-              class="absolute z-10 bg-base-100 border rounded-lg w-full mt-1 shadow-lg sm:w-[200px] overflow-hidden"
+              @click.stop
+              class="absolute top-full mt-1 left-0 z-10 bg-base-100 border border-neutral rounded-md w-full shadow-lg overflow-hidden"
             >
               <div class="p-2">
                 <input
@@ -51,14 +54,13 @@
                   v-model="search"
                   placeholder="Search language"
                   ref="searchLanguageInput"
-                  class="w-full input input-xs bg-gray-50"
+                  class="w-full p-2 rounded-md border border-neutral focus:outline-none focus-within:border-neutral"
                   @keydown.enter.prevent="selectHighlighted"
                 />
               </div>
-
               <ul
                 class="overflow-auto max-h-48"
-                v-if="open && filteredLanguages.length"
+                v-if="filteredLanguages.length"
               >
                 <li
                   v-for="(lang, index) in filteredLanguages"
@@ -76,6 +78,25 @@
             </div>
           </div>
         </div>
+        <button
+          @click="goToVideo"
+          class="mt-5 cursor-pointer w-full bg-warning text-on-primary py-4 rounded-xl font-title-sm text-title-sm hover:bg-on-primary-container transition-all flex items-center justify-center gap-2 group"
+        >
+          Translate Video
+          <span
+            class="mui-icon group-hover:translate-x-1 transition-transform"
+            data-icon="arrow_forward"
+            >arrow_forward</span
+          >
+        </button>
+        <div class="relative">
+          <p
+            :class="errorMessage ? 'visible' : 'invisible'"
+            class="absolute left-1/2 -translate-x-1/2 mt-2 text-center text-error text-xs"
+          >
+            {{ errorMessage }}
+          </p>
+        </div>
       </div>
     </div>
   </div>
@@ -92,7 +113,7 @@ const search = ref("");
 const selectedLanguage = ref(null);
 const searchLanguageInput = ref(null);
 const open = ref(false);
-const showError = ref(false);
+const errorMessage = ref("");
 const highlighted = ref(0);
 const languages = ref([]);
 
@@ -117,7 +138,7 @@ async function fetchLanguages() {
 }
 
 watch(youtubeLink, () => {
-  if (isValidYouTubeUrl()) showError.value = false;
+  if (isValidYouTubeUrl()) errorMessage.value = "";
 });
 
 watch(open, async (newVal) => {
@@ -144,24 +165,26 @@ function isValidYouTubeUrl() {
 function toggleDropdown() {
   if (youtubeLink.value && isValidYouTubeUrl()) {
     open.value = true;
-    showError.value = false;
+    errorMessage.value = "";
   } else {
     open.value = false;
-    showError.value = true;
+    errorMessage.value = "Please enter a valid URL";
   }
 }
 
-function goToVideo(lang) {
-  if (youtubeLink.value && lang) {
-    const videoId = youtubeLink.value.split("v=")[1];
-    const lang_code = lang.code;
-    // Navigate to the video page with the selected language
-    router.push({
-      name: "Video",
-      params: { id: videoId },
-      query: { target_lang: lang_code },
-    });
-  }
+function goToVideo() {
+  if (!selectedLanguage.value)
+    return (errorMessage.value = "Please select a target language");
+  if (!isValidYouTubeUrl())
+    return (errorMessage.value = "Please enter a valid URL");
+
+  const videoId = youtubeLink.value.split("v=")[1];
+  const lang_code = selectedLanguage.value.code;
+  router.push({
+    name: "Video",
+    params: { id: videoId },
+    query: { target_lang_code: lang_code },
+  });
 }
 
 function selectLanguage(lang) {
@@ -169,7 +192,6 @@ function selectLanguage(lang) {
   search.value = lang.label;
   open.value = false;
   highlighted.value = 0;
-  goToVideo(lang);
 }
 
 function selectHighlighted() {
