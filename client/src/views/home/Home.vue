@@ -178,13 +178,29 @@ function goToVideo() {
   if (!isValidYouTubeUrl())
     return (errorMessage.value = "Please enter a valid URL");
 
-  const videoId = youtubeLink.value.split("v=")[1];
+  const videoId = getYouTubeVideoId(youtubeLink.value);
   const lang_code = selectedLanguage.value.code;
   router.push({
     name: "Video",
     params: { id: videoId },
     query: { target_lang_code: lang_code },
   });
+}
+
+function getYouTubeVideoId(url) {
+  const parsed = new URL(url);
+
+  // Case 1: https://www.youtube.com/watch?v=ID
+  if (parsed.hostname.includes("youtube.com")) {
+    return parsed.searchParams.get("v");
+  }
+
+  // Case 2: https://youtu.be/ID
+  if (parsed.hostname === "youtu.be") {
+    return parsed.pathname.slice(1);
+  }
+
+  return null;
 }
 
 function selectLanguage(lang) {
