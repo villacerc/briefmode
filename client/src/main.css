@@ -16,7 +16,7 @@
   prefersdark: false;
   color-scheme: "light";
   --color-base-200: #f5f7fb;
-  --color-base-300: oklch(80% 0.114 19.571);
+  --color-base-300: #e2e8f0;
   --color-base-content: rgba(17, 25, 31, 0.85);
   --color-primary: #0d99ff;
   --color-primary-content: #ffffff;

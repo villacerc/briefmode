@@ -7,7 +7,11 @@
       >
         <div class="yt-player-container w-full">
           <div class="aspect-ratio-box">
-            <div class="aspect-ratio-box-content">
+            <div class="aspect-ratio-box-content relative">
+              <div
+                v-if="isLoading"
+                class="absolute inset-0 skeleton rounded-lg z-10"
+              ></div>
               <youtube
                 ref="youtubePlayer"
                 :src="`https://www.youtube.com/watch?v=${route.params.id}`"
@@ -69,6 +73,7 @@ const route = useRoute();
 // Vue automatically re-renders any part of the template or computed properties that depend on it.
 const player = ref<any>(null);
 const activeIndex = ref<number>(-1);
+const isLoading = ref(true);
 const snippets = reactive<TranslatedSnippet[]>([]);
 const uiStore = useUiStore();
 const settingsStore = useSettingsStore();
@@ -163,7 +168,12 @@ const fetchVideoTranscript = async (source_id: string) => {
         for (const line of lines) {
           if (line) {
             const chunk = JSON.parse(line);
-            if (chunk.data) snippets.push(...chunk.data);
+            if (chunk.data) {
+              if (isLoading.value) isLoading.value = false;
+              snippets.push(...chunk.data);
+            }
+            if (chunk.type === "complete")
+              eventStore.setAllSnippetsFetched(true);
           }
         }
       }

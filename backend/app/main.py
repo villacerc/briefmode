@@ -129,16 +129,17 @@ async def stream_translations(source_id: str, target_lang_code: str):
         async with AsyncSessionLocal() as db:
             target_lang = await LanguageStore(db).get_lang_by_code(target_lang_code)
             transcript_snippets = await VideoService(db).fetch_transcript_snippets(source_id)
-            transcript_snippets = transcript_snippets[:2]  # Limit to first 2 snippets for testing
+            transcript_snippets = transcript_snippets[:5]  # Limit to first 5 snippets for testing
 
-        chunk_size = 15
+        chunk_size = 1
         for i in range(0, len(transcript_snippets), chunk_size):
             transcript_chunk = transcript_snippets[i:i+chunk_size]
             try:
                 translated_chunk = await translate_chunk(transcript_chunk, target_lang)
-                yield json.dumps({"message": "Chunk translated", "data": translated_chunk}, ensure_ascii=False) + "\n"
+                yield json.dumps({"type": "chunk", "status": "success", "index": i, "data": translated_chunk}, ensure_ascii=False) + "\n"
             except Exception as e:
-                yield json.dumps({"message": "Failed to translate chunk", "chunk_index": i, "error": str(e)}, ensure_ascii=False) + "\n"
+                yield json.dumps({"type": "chunk", "status": "error", "index": i, "error": str(e)}, ensure_ascii=False) + "\n"
+        yield json.dumps({"type": "complete"}, ensure_ascii=False) + "\n"
     except Exception as e:
         raise RuntimeError(f"Error streaming translations for video (id: {source_id}). {e}")
 
