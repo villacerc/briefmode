@@ -42,9 +42,9 @@
 import type { SnippetWord } from "../types.js";
 import Popup from "./Popup.vue";
 import { languageUsesSpaces, removeAnnotations } from "../utils/helpers.js";
-import { useSettingsStore } from "../stores/settingsStore.ts";
-import { useEventStore } from "../stores/eventStore.ts";
-import { useUiStore } from "../stores/uiStore.ts";
+import { useSettingsStore } from "../stores/settingsStore";
+import { useEventStore } from "../stores/eventStore";
+import { useUiStore } from "../stores/uiStore";
 const settingsStore = useSettingsStore();
 const eventStore = useEventStore();
 const uiStore = useUiStore();
@@ -54,7 +54,7 @@ const wordClicked = (wordText: string) => {
   uiStore.showDictionaryPanel();
 };
 
-const props = defineProps({
+defineProps({
   words: {
     type: Object as () => SnippetWord[],
     required: true,

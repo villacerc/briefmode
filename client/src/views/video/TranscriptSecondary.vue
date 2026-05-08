@@ -40,12 +40,12 @@
 <script setup lang="ts">
 import type { TranslatedSnippet } from "../../types";
 import SnippetWords from "../../components/SnippetWords.vue";
-import { useEventStore } from "../../stores/eventStore.ts";
-import { formatSnippetTime } from "../../utils/helpers.ts";
+import { useEventStore } from "../../stores/eventStore";
+import { formatSnippetTime } from "../../utils/helpers";
 
 const eventStore = useEventStore();
 
-const props = defineProps({
+defineProps({
   activeIndex: {
     type: Number,
     required: true,

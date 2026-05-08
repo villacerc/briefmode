@@ -64,7 +64,7 @@ const fetchingEntry = ref(false);
 const search = ref("");
 let inputTimeout: number = 0;
 
-const props = defineProps({
+defineProps({
   snippets: {
     type: Array as () => TranslatedSnippet[],
     required: true,

@@ -2,7 +2,6 @@ import { createRouter, createWebHistory } from "vue-router";
 
 // Import your components (pages)
 import VideoLayout from "../views/video/VideoLayout.vue";
-
 import Home from "../views/home/Home.vue";
 import Video from "../views/video/Video.vue";
 
