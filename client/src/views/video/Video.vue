@@ -67,6 +67,7 @@ import Dictionary from "./Dictionary.vue";
 import { useUiStore } from "../../stores/uiStore.js";
 import { useSettingsStore } from "../../stores/settingsStore.ts";
 import { useEventStore } from "../../stores/eventStore.ts";
+import { apiFetch, apiFetchStream } from "../../utils/api.ts";
 
 const route = useRoute();
 // A ref in Vue 3 is reactive (good for primitives). Whenever its .value changes,
@@ -128,12 +129,7 @@ watch(
 
 const fetchVideoInfo = async (source_id: string) => {
   try {
-    const res = await fetch(`http://localhost:8000/api/video/${source_id}`);
-    if (!res.ok) {
-      throw new Error("Failed to fetch video info.");
-    }
-    const data = await res.json();
-    return data;
+    return await apiFetch(`/api/video/${source_id}`);
   } catch (error) {
     throw new Error("Failed to fetch video info. " + error);
   }
@@ -141,8 +137,8 @@ const fetchVideoInfo = async (source_id: string) => {
 
 const fetchVideoTranscript = async (source_id: string) => {
   try {
-    const res = await fetch(
-      `http://localhost:8000/api/transcript/${source_id}?target_lang_code=${settingsStore.targetLangCode}`
+    const res = await apiFetchStream(
+      `/api/transcript/${source_id}?target_lang_code=${settingsStore.targetLangCode}`
     );
     // res.body is a ReadableStream, representing the body of the response.
     // getReader() returns a stream reader that allows you to read the data chunk by chunk.

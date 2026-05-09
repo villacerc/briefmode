@@ -80,6 +80,7 @@ import SnippetWords from "../../components/SnippetWords.vue";
 import { onMounted, ref } from "vue";
 import { useEventStore } from "../../stores/eventStore.ts";
 import { base64ToBlob } from "../../utils/helpers";
+import { apiFetch } from "../../utils/api";
 
 const eventStore = useEventStore();
 
@@ -111,14 +112,10 @@ const fetchTTS = async () => {
   if (fetchingTTS.value) return;
   try {
     fetchingTTS.value = true;
-    const response = await fetch(
-      `http://localhost:8000/api/word_tts/${props.entry.word_id}`
-    );
-    if (!response.ok) throw new Error("Network response was not ok");
-    const data = await response.json();
-    return data.audio;
+    const resBody = await apiFetch(`/api/word_tts/${props.entry.word_id}`);
+    return resBody.audio;
   } catch (error) {
-    console.error("Error fetching dictionary entry:", error);
+    console.error("Error fetching TTS:", error);
     throw error;
   } finally {
     fetchingTTS.value = false;

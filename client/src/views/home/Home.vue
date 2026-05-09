@@ -105,6 +105,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, nextTick } from "vue";
 import { useRouter } from "vue-router";
+import { apiFetch } from "../../utils/api";
 
 const router = useRouter();
 
@@ -127,11 +128,8 @@ onMounted(async () => {
 
 async function fetchLanguages() {
   try {
-    const res = await fetch("http://localhost:8000/api/languages");
-    const body = await res.json();
-    if (body.data) {
-      languages.value = body.data;
-    }
+    const resBody = await apiFetch("/api/languages");
+    languages.value = resBody.data;
   } catch (err) {
     console.error(err);
   }

@@ -41,12 +41,12 @@
               v-if="uiStore.moreMenuOpen"
             >
               <li>
-                <a href="#" class="menu-item">
+                <RouterLink to="/" class="menu-item">
                   <i class="mui-icon text-lg mt-[2px]">home</i>
                   <span class="ml-3">Home</span>
-                </a>
+                </RouterLink>
               </li>
-              <li>
+              <!-- <li>
                 <a href="#" class="menu-item">
                   <i class="mui-icon text-lg">volunteer_activism</i>
                   <span class="ml-3">Support Us</span>
@@ -57,7 +57,7 @@
                   <i class="mui-icon text-lg mt-1">feedback</i>
                   <span class="ml-3">Feedback</span>
                 </a>
-              </li>
+              </li> -->
             </ul>
           </transition>
         </li>

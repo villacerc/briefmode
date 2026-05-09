@@ -54,6 +54,7 @@ import DictionaryWordContent from "./DictionaryWordContent.vue";
 import SnippetWords from "../../components/SnippetWords.vue";
 import { useEventStore } from "../../stores/eventStore";
 import { useSettingsStore } from "../../stores/settingsStore";
+import { apiFetch } from "../../utils/api";
 
 const eventStore = useEventStore();
 const settingsStore = useSettingsStore();
@@ -117,12 +118,9 @@ const handleSearch = async () => {
 
 const fetchDictionaryEntry = async (word: string) => {
   try {
-    const response = await fetch(
-      `http://localhost:8000/api/dictionary/${word}?source_lang_code=${settingsStore.videoInfo?.source_lang_code}&target_lang_code=${settingsStore.targetLangCode}`
+    return await apiFetch(
+      `/api/dictionary/${word}?source_lang_code=${settingsStore.videoInfo?.source_lang_code}&target_lang_code=${settingsStore.targetLangCode}`
     );
-    if (!response.ok) throw new Error("Network response was not ok");
-    const data = await response.json();
-    return data;
   } catch (error) {
     console.error("Error fetching dictionary entry:", error);
     throw error;
