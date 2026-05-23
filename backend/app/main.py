@@ -101,7 +101,8 @@ async def get_transcript(video_source_id: str, target_lang_code: str):
 
         return StreamingResponse(
             stream_translations(video.source_id, target_lang_code),
-            media_type="application/json"
+            media_type="application/x-ndjson",
+            headers={"X-Accel-Buffering": "no"}
         )
     except Exception as e:
         message = f"Error occurred while attempting to translate video (id: {video_source_id}). {e}"
