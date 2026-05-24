@@ -71,8 +71,8 @@ class VideoService:
             "title": video.title,
             "source_lang_code": video.language.code
         }
-        
-    async def fetch_transcript_snippets(self, source_id: str):
+
+    async def fetch_transcript_snippets(self, source_id: str, source_lang_code: str):
         # Check transcript in DB
         video = await self.video_store.get_video_by_source_id(source_id)
         transcript_snippets = await self.snippet_store.get_ts_snippets_by_video_id(video.id, eager_load=True)
@@ -80,7 +80,7 @@ class VideoService:
             return transcript_snippets
 
         # Fetch from external API if not in DB
-        transcript_data = await self.fetch_ytt_with_retry(source_id)
+        transcript_data = await self.fetch_ytt_with_retry(source_id, source_lang_code)
 
         # Ensure language exists in DB
         language_id = await self.language_store.save_language({
@@ -93,15 +93,10 @@ class VideoService:
         await self.snippet_store.save_ts_snippets(video.id, language, transcript_data)
         return await self.snippet_store.get_ts_snippets_by_video_id(video.id, eager_load=True)
 
-    def fetch_ytt(self, source_id: str):
-        transcript_list = self.ytt_api.list(source_id)
-        first_transcript = next(iter(transcript_list))
-        return self.ytt_api.fetch(source_id, languages=[first_transcript.language_code])
-
-    async def fetch_ytt_with_retry(self, source_id: str, retries: int = 5):
+    async def fetch_ytt_with_retry(self, source_id: str, source_lang_code: str, retries: int = 5):
         for attempt in range(retries):
             try:
-                return self.fetch_ytt(source_id)
+                return self.ytt_api.fetch(source_id, languages=[source_lang_code])
             except Exception as e:
                 if attempt < retries - 1:
                     await asyncio.sleep(1)

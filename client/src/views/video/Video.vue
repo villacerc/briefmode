@@ -91,7 +91,7 @@ onMounted(async () => {
     settingsStore.setVideo(videoInfo);
     settingsStore.setTargetLangCode(route.query.target_lang_code as string);
     eventStore.setAllSnippetsFetched(false);
-    await fetchVideoTranscript(videoInfo.source_id);
+    await fetchVideoTranscript(videoInfo.source_id, videoInfo.source_lang_code);
   } catch (err) {
     // TODO: redirect to error page
     console.error(err);
@@ -136,10 +136,13 @@ const fetchVideoInfo = async (source_id: string) => {
   }
 };
 
-const fetchVideoTranscript = async (source_id: string) => {
+const fetchVideoTranscript = async (
+  source_id: string,
+  source_lang_code: string
+) => {
   try {
     const res = await apiFetchStream(
-      `/api/transcript/${source_id}?target_lang_code=${settingsStore.targetLangCode}`
+      `/api/transcript/${source_id}?source_lang_code=${source_lang_code}&target_lang_code=${settingsStore.targetLangCode}`
     );
     // res.body is a ReadableStream, representing the body of the response.
     // getReader() returns a stream reader that allows you to read the data chunk by chunk.

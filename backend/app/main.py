@@ -92,7 +92,7 @@ async def get_video(source_id: str):
             )
 
 @app.get("/api/transcript/{video_source_id}", summary="Get Video Transcript and Translations")
-async def get_transcript(video_source_id: str, target_lang_code: str):
+async def get_transcript(video_source_id: str, source_lang_code: str, target_lang_code: str):
     try:
         async with AsyncSessionLocal() as db:
             video = await VideoStore(db).get_video_by_source_id(video_source_id)
@@ -100,7 +100,7 @@ async def get_transcript(video_source_id: str, target_lang_code: str):
                 video = await VideoService(db).fetch_video(video_source_id)
 
         return StreamingResponse(
-            stream_translations(video.source_id, target_lang_code),
+            stream_translations(video.source_id, source_lang_code, target_lang_code),
             media_type="application/x-ndjson",
             headers={"X-Accel-Buffering": "no"}
         )
@@ -125,11 +125,11 @@ async def get_video_languages():
             raise HTTPException(status_code=500, detail=message)
 
 # Stream translations for the transcript.
-async def stream_translations(source_id: str, target_lang_code: str):
+async def stream_translations(source_id: str, source_lang_code: str, target_lang_code: str):
     try:
         async with AsyncSessionLocal() as db:
             target_lang = await LanguageStore(db).get_lang_by_code(target_lang_code)
-            transcript_snippets = await VideoService(db).fetch_transcript_snippets(source_id)
+            transcript_snippets = await VideoService(db).fetch_transcript_snippets(source_id, source_lang_code)
 
         chunk_size = 1
         for i in range(0, len(transcript_snippets), chunk_size):
