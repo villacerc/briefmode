@@ -4,6 +4,7 @@ from youtube_transcript_api.proxies import GenericProxyConfig
 from models import Video
 import os
 import httpx
+import asyncio
 
 class VideoService:
     def __init__(self, db):
@@ -79,9 +80,7 @@ class VideoService:
             return transcript_snippets
 
         # Fetch from external API if not in DB
-        transcript_list = self.ytt_api.list(source_id)
-        first_transcript = next(iter(transcript_list))
-        transcript_data = self.ytt_api.fetch(source_id, languages=[first_transcript.language_code])
+        transcript_data = await self.fetch_ytt_with_retry(source_id)
 
         # Ensure language exists in DB
         language_id = await self.language_store.save_language({
@@ -93,3 +92,18 @@ class VideoService:
         # Persist new video + transcript
         await self.snippet_store.save_ts_snippets(video.id, language, transcript_data)
         return await self.snippet_store.get_ts_snippets_by_video_id(video.id, eager_load=True)
+
+    def fetch_ytt(self, source_id: str):
+        transcript_list = self.ytt_api.list(source_id)
+        first_transcript = next(iter(transcript_list))
+        return self.ytt_api.fetch(source_id, languages=[first_transcript.language_code])
+
+    async def fetch_ytt_with_retry(self, source_id: str, retries: int = 5):
+        for attempt in range(retries):
+            try:
+                return self.fetch_ytt(source_id)
+            except Exception as e:
+                if attempt < retries - 1:
+                    await asyncio.sleep(1)
+                else:
+                    raise RuntimeError(f"Failed to fetch transcript after {retries} attempts. Last error: {e}")

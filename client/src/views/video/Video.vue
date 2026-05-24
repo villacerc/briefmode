@@ -90,6 +90,7 @@ onMounted(async () => {
     );
     settingsStore.setVideo(videoInfo);
     settingsStore.setTargetLangCode(route.query.target_lang_code as string);
+    eventStore.setAllSnippetsFetched(false);
     await fetchVideoTranscript(videoInfo.source_id);
   } catch (err) {
     // TODO: redirect to error page
