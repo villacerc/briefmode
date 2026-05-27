@@ -139,7 +139,7 @@ body {
   filter;
 }
 
-.btn-circle:not(.btn-toggled, .btn-active):hover {
+.btn-circle:not(.btn-active):hover {
   @apply brightness-90;
 }
 
