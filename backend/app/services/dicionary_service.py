@@ -1,13 +1,13 @@
-from app.stores import LanguageStore, TranslationStore, DictionaryStore, WordStore, SnippetStore
+from app.stores import LanguageStore, DictionaryStore, WordStore, SnippetStore, WordTranslationStore, SnippetTranslationStore
 from models import Language, DictionaryPOS, Word, AIPromptType
 from .ai_service import AIService
 from app.utils.helpers import is_single_word
-from typing import List
 
 class DictionaryService:
     def __init__(self, db):
         self.db = db
-        self.translation_store = TranslationStore(db)
+        self.word_translation_store = WordTranslationStore(db)
+        self.snippet_translation_store = SnippetTranslationStore(db)
         self.language_store = LanguageStore(db)
         self.dictionary_store = DictionaryStore(db)
         self.word_store = WordStore(db)
@@ -16,6 +16,12 @@ class DictionaryService:
 
     async def get_dictionary_entry(self, text: str, source_lang: Language, target_lang: Language):
         try:
+            return {
+                "is_interpretable": False,
+                "is_word": False,
+                "data": None
+            }
+            # TODO - implement dictionary logic using batch SQL processes
             response = {
                 "is_interpretable": False,
                 "is_word": False,
@@ -68,16 +74,16 @@ class DictionaryService:
         except Exception as e:
             raise RuntimeError(f"Error getting dictionary entry for '{text}'. {e}")
 
-    async def get_normalized_word_dictionary_entry(self, word: Word, dictionary_pos_list: List[DictionaryPOS], target_lang: Language):
+    async def get_normalized_word_dictionary_entry(self, word: Word, dictionary_pos_list: list[DictionaryPOS], target_lang: Language):
         try:
-            word_translations = await self.translation_store.get_word_translations_by_lang(word.id, target_lang.id)
+            word_translations = await self.word_translation_store.get_word_translations_by_lang(word.id, target_lang.id)
             snippet_translation_list = [
-                await self.translation_store.get_snippet_translation_by_lang(pos.snippet_id, target_lang.id)
+                await self.snippet_translation_store.get_snippet_translation_by_lang_old(pos.snippet_id, target_lang.id)
                 for pos in dictionary_pos_list
             ]
             word_ids = {sw.word_id for pos in dictionary_pos_list for sw in pos.snippet.snippet_words}
             snippet_word_translations_map = {
-                wid: await self.translation_store.get_word_translations_by_lang(wid, target_lang.id)
+                wid: await self.word_translation_store.get_word_translations_by_lang(wid, target_lang.id)
                 for wid in word_ids
             }
 
@@ -144,7 +150,7 @@ class DictionaryService:
             snippet_id = await self.snippet_store.save_snippet(text, source_lang)
             snippet = await self.snippet_store.get_snippet_by_id(snippet_id)
     
-            snippet_translation = await self.translation_store.get_snippet_translation_by_lang(snippet_id, target_lang.id)
+            snippet_translation = await self.snippet_translation_store.get_snippet_translation_by_lang_old(snippet_id, target_lang.id)
             if snippet_translation is None:
                 if snippet.snippet_words:
                     snippet_words = [w.text for w in snippet.snippet_words]
@@ -154,11 +160,11 @@ class DictionaryService:
     
                 snippet_translation_id = await self.translation_store.save_ai_snippet_translation(snippet_id, source_lang, target_lang, ai_data)
                 await self.db.refresh(snippet)
-                snippet_translation = await self.translation_store.get_snippet_translation_by_id(snippet_translation_id)
+                snippet_translation = await self.snippet_translation_store.get_snippet_translation_by_id(snippet_translation_id)
 
             word_ids = {sw.word_id for sw in snippet.snippet_words}
             snippet_word_translations_map = {
-                wid: await self.translation_store.get_word_translations_by_lang(wid, target_lang.id)
+                wid: await self.word_translation_store.get_word_translations_by_lang(wid, target_lang.id)
                 for wid in word_ids
             }
 

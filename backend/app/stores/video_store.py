@@ -28,7 +28,15 @@ class VideoStore:
         if existing_video:
             return existing_video.id
             
-        video = Video(source_id=data["source_id"], title=data["title"], language_id=data["language_id"])
+        video = Video(source_id=data["source_id"], title=data["title"])
         self.db.add(video)
         await self.db.commit()
         return video.id
+
+    async def update_video(self, video: Video, data: dict):
+        for key, value in data.items():
+            if hasattr(video, key):
+                setattr(video, key, value)
+
+        await self.db.commit()
+        await self.db.refresh(video)

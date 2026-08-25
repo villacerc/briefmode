@@ -1,62 +1,220 @@
 # app/services/translation_service.py
-from models import TranscriptSnippet, Language, Word, Video, SnippetType, AIPromptType
-from app.stores import TranslationStore, VideoStore, WordStore, SnippetStore
+from models import TranscriptSnippet, Language, AIPromptType, SnippetTranslation
+from app.stores import VideoStore, WordStore, SnippetStore, WordTranslationStore, SnippetTranslationStore, SnippetWordStore
 from .ai_service import AIService
 from typing import List, Dict
+from collections import defaultdict
+import asyncio
+from app.utils.helpers import sanitize_word
 
 class TranslationService:
-    SEMAPHORE_CONCURRENCY = 10
-
     def __init__(self, db):
-        self.translation_store = TranslationStore(db)
         self.word_store = WordStore(db)
+        self.snippet_word_store = SnippetWordStore(db)
         self.video_store = VideoStore(db)
+        self.word_translation_store = WordTranslationStore(db)
+        self.snippet_translation_store = SnippetTranslationStore(db)
         self.snippet_store = SnippetStore(db)
         self.ai_service = AIService()
+        self.db = db
 
-    async def get_ts_snippet_translated_data(self, ts_snippet: TranscriptSnippet, target_lang: Language):
-        existing_translation = await self.translation_store.get_snippet_translation_by_lang(ts_snippet.id, target_lang.id)
-        if existing_translation:
-            return await self.get_normalized_ts_translated_snippet(ts_snippet, target_lang)
-    
-        if ts_snippet.snippet_words:
-            snippet_words = [w.text for w in ts_snippet.snippet_words]
-            parsed_json = await self.ai_service.fetch_ai_data(AIPromptType.SNIPPET_WORDS_TRANSLATION, {"snippet_text": ts_snippet.text, "snippet_words": snippet_words, "target_lang_name": target_lang.name})
+    async def get_ts_snippets_translated_data(
+        self,
+        ts_snippets: list[TranscriptSnippet],
+        source_lang: Language,
+        target_lang: Language,
+    ):
+        snippet_ids = [snippet.snippet_id for snippet in ts_snippets]
+
+        existing_translations = (
+            await self.snippet_translation_store.get_snippet_translations_by_lang(
+                snippet_ids,
+                target_lang.id,
+            )
+        )
+
+        if existing_translations:
+            return await self.get_normalized_ts_translated_snippets(
+                ts_snippets,
+                existing_translations,
+                source_lang,
+                target_lang,
+            )
+
+        snippets_with_no_saved_words = (
+            await self.snippet_store.get_snippets_by_ids_with_no_saved_words(snippet_ids)
+        )
+
+        if snippets_with_no_saved_words:
+            await self._generate_translations_for_new_words(
+                snippets_with_no_saved_words,
+                source_lang,
+                target_lang,
+            )
         else:
-            parsed_json = await self.ai_service.fetch_ai_data(AIPromptType.SNIPPET_TRANSLATION, {"text": ts_snippet.text, "target_lang_name": target_lang.name})
+            await self._generate_translations_for_existing_words(
+                ts_snippets,
+                target_lang,
+            )
 
-        await self.translation_store.save_ai_ts_snippet_translation(ts_snippet, target_lang, parsed_json)
+        await self.db.commit()
 
-        return await self.get_normalized_ts_translated_snippet(ts_snippet, target_lang)
+        snippet_translations = (
+            await self.snippet_translation_store.get_snippet_translations_by_lang(
+                snippet_ids,
+                target_lang.id,
+            )
+        )
+
+        return await self.get_normalized_ts_translated_snippets(
+            ts_snippets,
+            snippet_translations,
+            source_lang,
+            target_lang,
+        )
     
-    async def get_normalized_ts_translated_snippet(self, ts_snippet: TranscriptSnippet, target_lang: Language) -> Dict:
+    async def get_normalized_ts_translated_snippets(self, ts_snippets: List[TranscriptSnippet], snippets_translations: List[SnippetTranslation], source_lang: Language, target_lang: Language) -> List[Dict]:
         try:
-            video = await self.video_store.get_video_by_id(ts_snippet.video_id, eager_load=True)
-            snippet_translation = await self.translation_store.get_snippet_translation_by_lang(ts_snippet.snippet_id, target_lang.id)
-            snippet_words = await self.word_store.get_snippet_words(SnippetType.TRANSCRIPT, ts_snippet.id)
-            word_translations = [
-                await self.translation_store.get_word_translations_by_lang(sw.word_id, target_lang.id)
-                for sw in snippet_words
-            ]
-            
-            normalized_snippet_words = [{
-                "text": w.text,
-                "part_of_speech": w.part_of_speech_tag,
-                "romanized": w.word.romanized,
-                "translations": [{"text": t.text} for t in word_translations[i]],
-                "order_index": w.order_index
-            } for i, w in enumerate(snippet_words)]
+            translation_map = {t.snippet_id: t for t in snippets_translations}
+            words_by_snippet = defaultdict(list)
+            snippet_words = await self.snippet_word_store.get_snippet_words_batch([s.snippet_id for s in ts_snippets])
+            for sw in snippet_words:
+                words_by_snippet[sw.snippet_id].append(sw)
+            translations_by_word = defaultdict(list)
+            word_translations = await self.word_translation_store.get_word_translations_batch_by_lang(
+                [s.word_id for s in snippet_words],
+                target_lang.id,
+            )
+            for t in word_translations:
+                translations_by_word[t.word_id].append(t)
+        
+            normalized = []
 
-            return {
-                "snippet_id": ts_snippet.id,
-                "text": ts_snippet.text,
-                "translation": snippet_translation.text,
-                "source_lang_code": video.language.code,
-                "target_lang_code": target_lang.code,
-                "start": ts_snippet.start,
-                "end": ts_snippet.end,
-                "duration": ts_snippet.duration,
-                "snippet_words": normalized_snippet_words
-            }
+            for ts_snippet in ts_snippets:
+                snippet_translation = translation_map.get(ts_snippet.snippet_id)
+                if snippet_translation is None:
+                    raise ValueError(
+                        f"Missing translation for snippet {ts_snippet.snippet_id}"
+                    )
+
+                normalized_snippet_words = [{
+                    "text": w.text,
+                    "part_of_speech": w.part_of_speech_tag,
+                    "romanized": w.word.romanized,
+                    "translations": [{"text": t.text} for t in translations_by_word[w.word_id]],
+                    "order_index": w.order_index
+                } for _, w in enumerate(words_by_snippet[ts_snippet.snippet_id])]
+                
+                normalized.append({
+                    "snippet_id": ts_snippet.snippet_id,
+                    "text": ts_snippet.snippet.text,
+                    "translation": snippet_translation.text,
+                    "source_lang_code": source_lang.code,
+                    "target_lang_code": target_lang.code,
+                    "start": ts_snippet.start,
+                    "end": ts_snippet.end,
+                    "duration": ts_snippet.duration,
+                    "snippet_words": normalized_snippet_words
+                })
+
+            return normalized
         except Exception as e:
-            raise RuntimeError(f"Error normalizing translated snippet. {e}") from e
+            raise RuntimeError(f"Error normalizing batched translated snippets. {e}") from e
+
+    async def _generate_translations_for_new_words(
+        self,
+        snippets: list[TranscriptSnippet],
+        source_lang: Language,
+        target_lang: Language,
+    ):
+        ai_data = await self.ai_service.fetch_ai_data(
+            AIPromptType.SNIPPET_TRANSLATION,
+            {
+                "snippets": [
+                    {
+                        "snippet_id": snippet.id,
+                        "text": snippet.text,
+                    }
+                    for snippet in snippets
+                ],
+                "target_lang_name": target_lang.name,
+            },
+        )
+
+        await self.snippet_translation_store.add_ai_snippet_translations_batch(
+            ai_data,
+            target_lang.id,
+        )
+
+        all_word_parts = self._get_all_word_parts(ai_data)
+
+        word_map = await self.word_store.save_words_batch(
+            all_word_parts,
+            source_lang.id,
+        )
+
+        self.snippet_word_store.add_snippet_words_batch(
+            ai_data,
+            word_map,
+            source_lang.id,
+        )
+
+        all_word_parts = [
+            {
+                **word_part,
+                "word_id": word_map[(sanitize_word(word_part["word"]), source_lang.id)],
+            }
+            for word_part in all_word_parts
+        ]
+
+        await self.word_translation_store.add_ai_word_translations_batch(
+            all_word_parts,
+            target_lang.id,
+        )
+
+    async def _generate_translations_for_existing_words(
+        self,
+        ts_snippets: list[TranscriptSnippet],
+        target_lang: Language,
+    ):
+        snippets_data = [
+            {
+                "snippet_id": ts_snippet.snippet_id,
+                "snippet_text": ts_snippet.snippet.text,
+                "snippet_words": [
+                    {
+                        "word_id": sw.word_id,
+                        "text": sw.word.text,
+                    }
+                    for sw in ts_snippet.snippet.snippet_words
+                ],
+            }
+            for ts_snippet in ts_snippets
+        ]
+
+        ai_data = await self.ai_service.fetch_ai_data(
+            AIPromptType.SNIPPET_WORDS_TRANSLATION,
+            {
+                "snippets": snippets_data,
+                "target_lang_name": target_lang.name,
+            },
+        )
+
+        await self.snippet_translation_store.add_ai_snippet_translations_batch(
+            ai_data,
+            target_lang.id,
+        )
+
+        all_word_parts = self._get_all_word_parts(ai_data)
+
+        await self.word_translation_store.add_ai_word_translations_batch(
+            all_word_parts,
+            target_lang.id,
+        )
+    
+    def _get_all_word_parts(self, ai_data):
+        return [
+            word_part
+            for snippet in ai_data
+            for word_part in snippet["word_parts"]
+        ]

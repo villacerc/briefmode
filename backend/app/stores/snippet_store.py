@@ -1,14 +1,7 @@
 from sqlalchemy.orm import Session, selectinload
-from models import Snippet, Language, TranscriptSnippet, SnippetWord, SnippetTranslation
+from models import Snippet, Language
 from app.utils.helpers import sanitize_snippet_text
 from sqlalchemy import select
-
-TRANSCRIPT_SNIPPET_QUERY_OPTIONS = (
-    selectinload(TranscriptSnippet.snippet_words)
-    .selectinload(SnippetWord.word),
-    selectinload(TranscriptSnippet.snippet),
-    selectinload(TranscriptSnippet.video),
-)
 
 class SnippetStore:
     def __init__(self, db: Session):
@@ -30,51 +23,14 @@ class SnippetStore:
         )
         return result.scalars().first()
 
-    async def get_ts_snippets_by_video_id(self, video_id: int, eager_load: bool = False) -> list[TranscriptSnippet]:
-        query = select(TranscriptSnippet).where(TranscriptSnippet.video_id == video_id).order_by(TranscriptSnippet.start)
-        if eager_load:
-            query = query.options(*TRANSCRIPT_SNIPPET_QUERY_OPTIONS)
+    async def get_snippets_by_ids_with_no_saved_words(self, snippet_ids: list[int]):
+        query = select(Snippet).where(
+            Snippet.id.in_(snippet_ids),
+            ~Snippet.snippet_words.any(),
+        )
 
         result = await self.db.execute(query)
-        return result.scalars().all()   
-
-    async def save_ts_snippets(self, video_id: int, source_lang: Language, fetched_data: list[dict]):
-        for i, item in enumerate(fetched_data.snippets):
-            snippet_id = await self.save_snippet(item.text, source_lang)
-
-            end_time = fetched_data[i + 1].start if i < len(fetched_data) - 1 else item.start + item.duration
-            await self.save_ts_snippet(video_id=video_id, snippet_id=snippet_id, data=item, end_time=end_time)
-
-    async def get_ts_snippet_by_id(self, ts_snippet_id: int, eager_load: bool = False) -> TranscriptSnippet:
-        query = select(TranscriptSnippet).where(TranscriptSnippet.id == ts_snippet_id)
-        if eager_load:
-            query = query.options(*TRANSCRIPT_SNIPPET_QUERY_OPTIONS)
-
-        result = await self.db.execute(query)
-        return result.scalars().first()
-        
-    async def save_ts_snippet(self, video_id: int, snippet_id: int, data: dict, end_time: float) -> TranscriptSnippet:
-        existing_ts_snippet_result = await self.db.execute(
-            select(TranscriptSnippet).filter(
-                TranscriptSnippet.video_id == video_id,
-                TranscriptSnippet.start == data.start,
-            )
-        )
-        existing_ts_snippet = existing_ts_snippet_result.scalars().first()
-        if existing_ts_snippet:
-            return existing_ts_snippet.id
-
-        ts_snippet = TranscriptSnippet(
-            video_id=video_id,
-            snippet_id=snippet_id,
-            text=data.text,
-            start=data.start,
-            end=end_time,
-            duration=data.duration
-        )
-        self.db.add(ts_snippet)
-        await self.db.commit()
-        return ts_snippet.id
+        return result.scalars().all()
 
     async def save_snippet(self, text: str, source_lang: Language) -> Snippet:
         existing_snippet = await self.get_snippet(text, source_lang)
@@ -88,3 +44,19 @@ class SnippetStore:
         await self.db.commit()
 
         return new_snippet.id
+
+    async def add_snippets(
+        self,
+        fetched_data: list,
+    ) -> list[Snippet]:
+
+        new_snippets = [
+            Snippet(text=snippet.text)
+            for snippet in fetched_data
+        ]
+
+        self.db.add_all(new_snippets)
+
+        return new_snippets
+
+        

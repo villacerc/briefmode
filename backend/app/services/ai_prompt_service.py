@@ -49,36 +49,54 @@ class AIPromptService:
                 
     def generate_ai_snippet_translation_prompt(self, params: dict) -> str:
         return f"""
-                Translate the input below to {params["target_lang_name"]}.
+               Translate the following transcript snippets into {params["target_lang_name"]}.
+
+                The input is a JSON array of transcript snippets.
+
                 Rules:
-                1. Respond ONLY with valid JSON. Do NOT include explanations, comments, or extra text.
-                2. Capitalize the first word only if required by grammar.
-                3. Break down input into individual word tokens, including:
-                    - "word": original word with punctuation intact. 
-                    - "part_of_speech": only include the **main POS label** (e.g., "verb"), not long explanations.
-                    - "romanized": Latin script romanization
-                    - "translations": at least three translation candidates if possible.
-                4. "romanized" must never contain non-Latin characters.
-                5. Use properly formatted JSON, double quotes, no trailing commas.
+                1. Respond ONLY with valid JSON. Do NOT include explanations, markdown, comments, or extra text.
+                2. Return a JSON array.
+                3. The output array MUST contain EXACTLY the same number of objects as the input array.
+                4. Preserve the input order exactly.
+                5. Each output object MUST contain the same "id" as its corresponding input object.
+                6. Do NOT merge, split, reorder, or omit snippets.
+                7. Transcript snippets may begin or end in the middle of a sentence. Translate EACH snippet independently exactly as provided. Do NOT combine adjacent snippets into complete sentences.
+                8. If a snippet is already in {params["target_lang_name"]}, keep its translation identical to the original text.
+                9. Capitalize the first word only if required by grammar.
+                10. Break each snippet into individual word tokens:
+                    - "word": original word with punctuation intact.
+                    - "part_of_speech": only the main POS label (e.g. "verb").
+                    - "romanized": Latin script only.
+                    - "phonetic_spelling": simplified English pronunciation (not IPA).
+                    - "translations": at least three translation candidates when possible.
+                11. "romanized" must never contain non-Latin characters.
+                12. Return properly formatted JSON using double quotes and no trailing commas.
 
-                Output JSON format:
-
-                {{
-                    "snippet_text": "<original input text>",
-                    "translation": "<full translated sentence here otherwise original text if already in target language>",
-                    "word_parts": [
+                Output format:
+                [
                     {{
-                        "word": "<original word with punctuation intact>",
-                        "part_of_speech": "<part of speech>",
-                        "romanized": "<romanized form in Latin>",
-                        "phonetic_spelling": "<simplified pronunciation using familiar English letters and stress marks (e.g., huh-LOH, HEE-loh, sah-lahm), avoiding IPA symbols>",
-                        "translations": "<a list of at least three translation candidates if possible in {params["target_lang_name"]}>"
+                        "snippet_id": <same input id>,
+                        "snippet_text": "<original input text>",
+                        "translation": "<translated snippet>",
+                        "word_parts": [
+                            {{
+                                "word": "<original word>",
+                                "part_of_speech": "<part of speech>",
+                                "romanized": "<romanized form>",
+                                "phonetic_spelling": "<simplified pronunciation>",
+                                "translations": [
+                                    "<candidate 1>",
+                                    "<candidate 2>",
+                                    "<candidate 3>"
+                                ]
+                            }}
+                        ]
                     }}
-                    ]
-                }}
+                ]
 
                 Input:
-                {params["text"]}
+
+                {params["snippets"]}
                 """
 
     def generate_ai_dictionary_pos_prompt(self, params: dict) -> str:
@@ -132,26 +150,47 @@ class AIPromptService:
     
     def generate_ai_snippet_words_translation_prompt(self, params: dict) -> str:
         return f"""
-                Translate the list of snippet words below to {params["target_lang_name"]}.
+                Translate the words from the following transcript snippets into
+                {params["target_lang_name"]}.
+
+                The input is a JSON array of snippet words.
 
                 Rules:
-                1. Respond ONLY with valid JSON. Do NOT include explanations, comments, or extra text.
-                2. Provide at least three translation candidates for each word if possible.
-                3. Use properly formatted JSON: double quotes, no trailing commas.
+                1. Respond ONLY with valid JSON. Do NOT include explanations, comments,
+                markdown, or extra text.
+                2. Return a JSON array.
+                3. Return exactly one output object for each snippet id.
+                4. Preserve the input order exactly.
+                5. Do not add, remove, merge, split, or reorder snippet words.
+                6. Each output object must contain:
+                - "snippet_id": provided id of the snippet
+                - "translation": the translated snippet text
+                - "word_parts": list of word objects
+                7. Each word_part object must contain
+                - "word_id": provided id of the word
+                - "translations": list of translation candidates
+                8. Provide at least three translation candidates for each word when possible.
+                9. If a word has no reasonable translation, return an empty list.
+                10. Return properly formatted JSON using double quotes and no trailing commas.
 
-                Output JSON format:
-                {{
-                "snippet_text": "<the full original snippet text>",
-                "translation": "<fully translated snippet text here otherwise original text if already translated>",
-                "word_parts": [
-                    {{  
-                    "word": "<original word>",
-                    "translations": "<list of at least three translation candidates for each word if possible.>"
+                Output format:
+                [
+                    {{
+                        "snippet_id": <same input snippet id>,
+                        "translation": "<translated snippet text>",
+                        "word_parts": [
+                            {{
+                                "word_id": <same input word id>,
+                                "translations": [
+                                    "<candidate 1>",
+                                    "<candidate 2>",
+                                    "<candidate 3>"
+                                ]
+                            }}
+                        ]
                     }}
                 ]
-                }}
 
                 Input:
-                "snippet_text": "{params["snippet_text"]}"
-                "snippet_words": {params["snippet_words"]}
+                {params["snippets"]}
                 """

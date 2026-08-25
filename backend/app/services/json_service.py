@@ -117,102 +117,189 @@ class JSONService():
             if not data["normalized_text"].strip():
                 raise ValueError("'normalized_text' cannot be empty when 'is_interpretable' is true")
 
-    def validate_translation_json(self, data: dict) -> None:
+    def validate_translation_json(self, data: list[dict]) -> None:
+        if not isinstance(data, list):
+            raise ValueError("Response must be a JSON array")
+
+        for i, snippet in enumerate(data):
+            if not isinstance(snippet, dict):
+                raise ValueError(f"Item {i} must be an object")
+
+            self._validate_translation_object(snippet)
+
+    def _validate_translation_object(self, data: dict) -> None:
+        """Validate a translated transcript snippet."""
+
+        self._require_keys(
+            data,
+            ("snippet_id", "snippet_text", "translation", "word_parts"),
+        )
+
+        self._require_type(data["snippet_id"], (int, str), "snippet_id")
+        self._require_type(data["snippet_text"], str, "snippet_text")
+        self._require_type(data["translation"], str, "translation")
+        self._require_type(data["word_parts"], list, "word_parts")
+
+        for i, part in enumerate(data["word_parts"], start=1):
+            self._validate_word_part(
+                part,
+                index=i,
+                snippet_text=data["snippet_text"],
+            )
+
+    def _validate_word_part(
+        self,
+        part: dict,
+        *,
+        index: int,
+        snippet_text: str,
+    ) -> None:
+        if not isinstance(part, dict):
+            raise ValueError(f"word_parts[{index}] must be an object")
+
+        self._require_keys(
+            part,
+            (
+                "word",
+                "part_of_speech",
+                "romanized",
+                "phonetic_spelling",
+                "translations",
+            ),
+        )
+
+        self._require_type(part["word"], str, f"word_parts[{index}]['word']")
+        self._require_type(
+            part["part_of_speech"],
+            str,
+            f"word_parts[{index}]['part_of_speech']",
+        )
+        self._require_type(
+            part["romanized"],
+            str,
+            f"word_parts[{index}]['romanized']",
+        )
+        self._require_type(
+            part["phonetic_spelling"],
+            str,
+            f"word_parts[{index}]['phonetic_spelling']",
+        )
+        self._require_type(
+            part["translations"],
+            list,
+            f"word_parts[{index}]['translations']",
+        )
+
+        if part["word"] not in snippet_text:
+            raise ValueError(
+                f"word_parts[{index}]['word'] '{part['word']}' "
+                "not found in snippet text"
+            )
+
+        romanized = part["romanized"]
+        if romanized and not is_latin_script(romanized):
+            raise ValueError(
+                f"word_parts[{index}]['romanized'] contains "
+                f"non-Latin characters: {romanized}"
+            )
+
+        phonetic = part["phonetic_spelling"]
+        if phonetic and not is_latin_script(phonetic):
+            raise ValueError(
+                f"word_parts[{index}]['phonetic_spelling'] contains "
+                f"non-Latin characters: {phonetic}"
+            )
+
+        for j, translation in enumerate(part["translations"], start=1):
+            self._require_type(
+                translation,
+                str,
+                f"word_parts[{index}]['translations'][{j}]",
+            )
+
+    def validate_snippet_words_translation_json(self, data: list) -> None:
         """
-        Validates the structure and content of the data translation JSON.
+        Validates the structure and content of the snippet word translation JSON.
         Raises ValueError if something is invalid.
         """
 
-        # Must contain required top-level fields
-        if "translation" not in data or "word_parts" not in data:
-            raise ValueError("Missing required keys: 'translation' and/or 'word_parts'")
+        self._require_type(data, list, "data")
 
-        if not isinstance(data["translation"], str):
-            raise ValueError("'translation' must be a string")
+        for i, snippet in enumerate(data, start=1):
+            if not isinstance(snippet, dict):
+                raise ValueError(f"data[{i}] must be an object")
 
-        if not isinstance(data["word_parts"], list):
-            raise ValueError("'word_parts' must be a list")
+            # Required snippet keys
+            self._require_keys(
+                snippet,
+                ("snippet_id", "translation", "word_parts")
+            )
 
-        for i, part in enumerate(data["word_parts"], start=1):
-            if not isinstance(part, dict):
-                raise ValueError(f"word_parts[{i}] must be an object")
-
-            # Required keys in each word part
-            for key in ("word", "part_of_speech", "romanized", "translations"):
-                if key not in part:
-                    raise ValueError(f"word_parts[{i}] is missing key '{key}'")
-
-            if not isinstance(part["word"], str):
-                raise ValueError(f"word_parts[{i}]['word'] must be a string")
-
-            if not isinstance(part["part_of_speech"], str):
-                raise ValueError(f"word_parts[{i}]['part_of_speech'] must be a string")
-
-            if part["word"] not in data["snippet_text"]:
-                raise ValueError(f"word_parts[{i}]['word'] '{part['word']}' not found in snippet text")
-
-            romanized = part["romanized"]
-            if not isinstance(romanized, str):
-                raise ValueError(f"word_parts[{i}]['romanized'] must be a string")
-
-            # Check romanized: must be empty or strictly Latin script
-            if romanized and not is_latin_script(romanized):
+            # Validate snippet_id
+            if not isinstance(snippet["snippet_id"], (int, str)):
                 raise ValueError(
-                    f"word_parts[{i}]['romanized'] contains non-Latin characters: {romanized}"
+                    f"data[{i}]['snippet_id'] must be an integer or string"
                 )
 
-            # Validate translations list
-            translations = part["translations"]
-            if not isinstance(translations, list):
-                raise ValueError(f"word_parts[{i}]['translations'] must be a list")
+            # Validate translation
+            self._require_type(
+                snippet["translation"],
+                str,
+                f"data[{i}]['translation']"
+            )
 
-            for j, t in enumerate(translations, start=1):
-                if not isinstance(t, str):
+            # Validate word_parts
+            self._require_type(
+                snippet["word_parts"],
+                list,
+                f"data[{i}]['word_parts']"
+            )
+
+            for j, part in enumerate(snippet["word_parts"], start=1):
+                if not isinstance(part, dict):
                     raise ValueError(
-                        f"word_parts[{i}]['translations'][{j}] must be a string"
+                        f"data[{i}]['word_parts'][{j}] must be an object"
                     )
 
-    def validate_snippet_words_translation_json(self, data: dict) -> None:
-        """
-        Validates the structure and content of the translation prompt JSON.
-        Raises ValueError if something is invalid.
-        """
+                # Required word part keys
+                self._require_keys(
+                    part,
+                    ("word_id", "translations")
+                )
 
-        # Required top-level keys
-        required_keys = ("snippet_text", "translation", "word_parts")
-        for key in required_keys:
-            if key not in data:
-                raise ValueError(f"Missing required key: '{key}'")
-
-        if not isinstance(data["snippet_text"], str):
-            raise ValueError("'snippet_text' must be a string")
-
-        if not isinstance(data["translation"], str):
-            raise ValueError("'translation' must be a string")
-
-        if not isinstance(data["word_parts"], list):
-            raise ValueError("'word_parts' must be a list")
-
-        for i, part in enumerate(data["word_parts"], start=1):
-            if not isinstance(part, dict):
-                raise ValueError(f"word_parts[{i}] must be an object")
-
-            # Required keys per word part
-            for key in ("word", "translations"):
-                if key not in part:
-                    raise ValueError(f"word_parts[{i}] is missing key '{key}'")
-
-            # Validate word
-            if not isinstance(part["word"], str):
-                raise ValueError(f"word_parts[{i}]['word'] must be a string")
-
-            # Validate translations
-            translations = part["translations"]
-            if not isinstance(translations, list):
-                raise ValueError(f"word_parts[{i}]['translations'] must be a list")
-
-            for j, t in enumerate(translations, start=1):
-                if not isinstance(t, str):
+                # Validate word_id
+                if not isinstance(part["word_id"], (int, str)):
                     raise ValueError(
-                        f"word_parts[{i}]['translations'][{j}] must be a string"
+                        f"data[{i}]['word_parts'][{j}]['word_id'] "
+                        "must be an integer or string"
                     )
+
+                # Validate translations
+                translations = part["translations"]
+
+                self._require_type(
+                    translations,
+                    list,
+                    f"data[{i}]['word_parts'][{j}]['translations']"
+                )
+
+                for k, translation in enumerate(translations, start=1):
+                    self._require_type(
+                        translation,
+                        str,
+                        f"data[{i}]['word_parts'][{j}]['translations'][{k}]"
+                    )
+
+    def _require_keys(self, obj: dict, required: tuple[str, ...]) -> None:
+        missing = [key for key in required if key not in obj]
+        if missing:
+            raise ValueError(f"Missing required keys: {', '.join(missing)}")
+
+    def _require_type(self, value, expected_type, field: str) -> None:
+        if not isinstance(value, expected_type):
+            if isinstance(expected_type, tuple):
+                expected = " or ".join(t.__name__ for t in expected_type)
+            else:
+                expected = expected_type.__name__
+
+            raise ValueError(f"'{field}' must be {expected}")
