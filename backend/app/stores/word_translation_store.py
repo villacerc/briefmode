@@ -54,17 +54,3 @@ class WordTranslationStore:
 
         result = await self.db.execute(query)
         return result.scalars().all()
-
-    async def get_word_translations_by_lang(self, word_id: int, lang_id: int, eager_load: bool = False) -> list[WordTranslation]:
-        query = select(WordTranslation).where(
-                WordTranslation.word_id == word_id,
-                WordTranslation.language_id == lang_id
-            )
-        if eager_load:
-            query = query.options(
-                selectinload(WordTranslation.language),
-                selectinload(WordTranslation.word)
-            )
-
-        result = await self.db.execute(query)
-        return result.scalars().all()

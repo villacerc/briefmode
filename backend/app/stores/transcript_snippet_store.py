@@ -14,15 +14,6 @@ class TranscriptSnippetStore:
     def __init__(self, db: Session):
         self.db = db
 
-    async def get_ts_snippets_by_ids_with_no_saved_words(self, ts_snippet_ids: list[int]):
-        query = select(TranscriptSnippet.id).where(
-            TranscriptSnippet.id.in_(ts_snippet_ids),
-            ~TranscriptSnippet.snippet_words.any(),
-        )
-
-        result = await self.db.execute(query)
-        return result.scalars().all()
-
     async def get_ts_snippets_by_video_id(self, video_id: int, eager_load: bool = False) -> list[TranscriptSnippet]:
         query = select(TranscriptSnippet).where(TranscriptSnippet.video_id == video_id).order_by(TranscriptSnippet.start)
         if eager_load:

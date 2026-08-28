@@ -168,6 +168,14 @@ const fetchVideoTranscript = async (source_id: string) => {
             if (chunk.data) {
               if (isLoading.value) isLoading.value = false;
               snippets.push(...chunk.data);
+              if (
+                chunk.status === "success" &&
+                !settingsStore.videoInfo?.source_lang_code
+              ) {
+                settingsStore.setVideoSourceLangCode(
+                  chunk.data[0].source_lang_code
+                );
+              }
             }
             if (chunk.type === "complete")
               eventStore.setAllSnippetsFetched(true);

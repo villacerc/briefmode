@@ -1,5 +1,5 @@
 # app/services/translation_service.py
-from models import TranscriptSnippet, Language, AIPromptType, SnippetTranslation
+from models import TranscriptSnippet, Language, AIPromptType, SnippetTranslation, Snippet
 from app.stores import VideoStore, WordStore, SnippetStore, WordTranslationStore, SnippetTranslationStore, SnippetWordStore
 from .ai_service import AIService
 from typing import List, Dict
@@ -46,14 +46,14 @@ class TranslationService:
         )
 
         if snippets_with_no_saved_words:
-            await self._generate_translations_for_new_words(
+            await self.generate_snippet_translations_and_word_translations(
                 snippets_with_no_saved_words,
                 source_lang,
                 target_lang,
             )
         else:
-            await self._generate_translations_for_existing_words(
-                ts_snippets,
+            await self.generate_snippet_translations_and_word_translations_for_existing_snippet_words(
+                [ts_snippet.snippet for ts_snippet in ts_snippets],
                 target_lang,
             )
 
@@ -121,9 +121,9 @@ class TranslationService:
         except Exception as e:
             raise RuntimeError(f"Error normalizing batched translated snippets. {e}") from e
 
-    async def _generate_translations_for_new_words(
+    async def generate_snippet_translations_and_word_translations(
         self,
-        snippets: list[TranscriptSnippet],
+        snippets: list[Snippet],
         source_lang: Language,
         target_lang: Language,
     ):
@@ -148,12 +148,12 @@ class TranslationService:
 
         all_word_parts = self._get_all_word_parts(ai_data)
 
-        word_map = await self.word_store.save_words_batch(
+        word_map = await self.word_store.save_ai_words_batch(
             all_word_parts,
             source_lang.id,
         )
 
-        self.snippet_word_store.add_snippet_words_batch(
+        self.snippet_word_store.add_ai_snippet_words_batch(
             ai_data,
             word_map,
             source_lang.id,
@@ -172,24 +172,24 @@ class TranslationService:
             target_lang.id,
         )
 
-    async def _generate_translations_for_existing_words(
+    async def generate_snippet_translations_and_word_translations_for_existing_snippet_words(
         self,
-        ts_snippets: list[TranscriptSnippet],
+        snippets: list[Snippet],
         target_lang: Language,
     ):
         snippets_data = [
             {
-                "snippet_id": ts_snippet.snippet_id,
-                "snippet_text": ts_snippet.snippet.text,
+                "snippet_id": snippet.id,
+                "snippet_text": snippet.text,
                 "snippet_words": [
                     {
                         "word_id": sw.word_id,
                         "text": sw.word.text,
                     }
-                    for sw in ts_snippet.snippet.snippet_words
+                    for sw in snippet.snippet_words
                 ],
             }
-            for ts_snippet in ts_snippets
+            for snippet in snippets
         ]
 
         ai_data = await self.ai_service.fetch_ai_data(

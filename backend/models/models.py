@@ -4,15 +4,11 @@ from database import Base
 import enum
 
 class AIPromptType(enum.Enum):
-    SNIPPET_TRANSLATION = "snippet_translation"
-    DICTIONARY_ENTRY = "dictionary_entry"
-    DICTIONARY_POS = "dictionary_pos"
-    TEXT_INTERPRETATION = "text_interpretation"
-    SNIPPET_WORDS_TRANSLATION = "snippet_words_translation"
-
-class SnippetType(enum.Enum):
-    TRANSCRIPT = "transcript"
-    POS_EXAMPLE = "pos_example"
+    SNIPPET_TRANSLATION = 1
+    WORD_DICTIONARY = 2
+    WORD_POS = 3
+    TEXT_INTERPRETATION = 4
+    SNIPPET_WORDS_TRANSLATION = 5
 
 class Video(Base):
     __tablename__ = "videos"
@@ -56,14 +52,16 @@ class Snippet(Base):
     __tablename__ = "snippets"
 
     id = Column(Integer, primary_key=True)
+    language_id = Column(Integer, ForeignKey("languages.id"), nullable=False)
     text = Column(Text, nullable=False, index=True)
 
     created_at = Column(DateTime, server_default=func.now())
-    
+
+    language = relationship("Language", back_populates="snippets")
     snippet_words = relationship("SnippetWord", back_populates="snippet", cascade="all, delete-orphan", lazy="selectin", order_by="SnippetWord.order_index")
     translations = relationship("SnippetTranslation", back_populates="snippet", cascade="all, delete-orphan")
     transcript_snippet = relationship("TranscriptSnippet", back_populates="snippet", cascade="all, delete-orphan")
-    dictionary_pos_list = relationship("DictionaryPOS", back_populates="snippet", cascade="all, delete-orphan")
+    word_pos_snippet = relationship("WordPOSSnippet", back_populates="snippet", cascade="all, delete-orphan")
 
 class SnippetTranslation(Base):
     __tablename__ = "snippet_translations"
@@ -79,28 +77,27 @@ class SnippetTranslation(Base):
     language = relationship("Language", back_populates="snippet_translations")
 
     __table_args__ = (
+        UniqueConstraint("snippet_id", "language_id", name="uq_snippet_translation_snippet_lang"),
         Index("ix_snippet_translations_snippet_lang", "snippet_id", "language_id", unique=True),
     )
 
-class DictionaryPOS(Base):
-    __tablename__ = "dictionary_pos"
+class WordPOSSnippet(Base):
+    __tablename__ = "word_pos_snippet"
 
     id = Column(Integer, primary_key=True)
     word_id = Column(Integer, ForeignKey("words.id", ondelete="CASCADE"), nullable=False)
-    language_id = Column(Integer, ForeignKey("languages.id"), nullable=False)
     snippet_id = Column(Integer, ForeignKey("snippets.id"), nullable=False)
     name = Column(String(50), nullable=False)
     description = Column(Text)
 
     created_at = Column(DateTime, server_default=func.now())
     
-    language = relationship("Language", back_populates="dictionary_pos_list")
-    snippet = relationship("Snippet", back_populates="dictionary_pos_list")
-    word = relationship("Word", back_populates="dictionary_pos_list")
+    snippet = relationship("Snippet", back_populates="word_pos_snippet")
+    word = relationship("Word", back_populates="word_pos_snippets")
 
     __table_args__ = (
         UniqueConstraint("word_id", "name", name="uq_word_pos_name"),
-        Index("ix_dictionary_pos_word_lang", "word_id", "language_id"),
+        Index("ix_dictionary_pos_word_lang", "word_id", "name"),
     )
 
 class SnippetWord(Base):
@@ -137,7 +134,7 @@ class Word(Base):
     language = relationship("Language", back_populates="words")
     snippet_words = relationship("SnippetWord", back_populates="word")
     word_translations = relationship("WordTranslation", back_populates="word", cascade="all, delete-orphan")
-    dictionary_pos_list = relationship("DictionaryPOS", back_populates="word", cascade="all, delete-orphan")
+    word_pos_snippets = relationship("WordPOSSnippet", back_populates="word", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("ix_word_text_lang", "text", "language_id", unique=True),
@@ -171,7 +168,7 @@ class Language(Base):
 
     created_at = Column(DateTime, server_default=func.now())
 
-    dictionary_pos_list = relationship("DictionaryPOS", back_populates="language")
+    snippets = relationship("Snippet", back_populates="language")
     snippet_translations = relationship("SnippetTranslation", back_populates="language")
     words = relationship("Word", back_populates="language")
     word_translations = relationship("WordTranslation", back_populates="language")

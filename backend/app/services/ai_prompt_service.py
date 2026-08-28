@@ -5,10 +5,10 @@ class AIPromptService:
         match prompt_type:
             case AIPromptType.SNIPPET_TRANSLATION:
                 return self.generate_ai_snippet_translation_prompt(params)
-            case AIPromptType.DICTIONARY_POS:
-                return self.generate_ai_dictionary_pos_prompt(params)
-            case AIPromptType.DICTIONARY_ENTRY:
-                return self.generate_ai_dictionary_entry_prompt(params)
+            case AIPromptType.WORD_POS:
+                return self.generate_ai_word_pos_prompt(params)
+            case AIPromptType.WORD_DICTIONARY:
+                return self.generate_ai_word_dictionary_prompt(params)
             case AIPromptType.TEXT_INTERPRETATION:
                 return self.generate_ai_text_interpretation_prompt(params)
             case AIPromptType.SNIPPET_WORDS_TRANSLATION:
@@ -16,30 +16,34 @@ class AIPromptService:
             case _:
                 raise ValueError(f"Unsupported prompt type: {prompt_type}")
 
-    def generate_ai_dictionary_entry_prompt(self, params: dict) -> str:
+    def generate_ai_word_dictionary_prompt(self, params: dict) -> str:
         return f"""
                 You are a dictionary assistant. 
                 Given a word, a source language, and a target language, produce a JSON response according to the rules below.
 
                 Rules
                 1. Romanization output: romanized form of the input word in the Latin script.
-                2. Translations: Provide up to 4 plausible translations into the target language.
+                2. Translations: Provide a list of up to 4 plausible translations into the target language.
                 3. Parts of speech: Provide up to 4 unique parts of speech if available. Each must include:
                     • Part of speech (in English)
                     • Definition (in the target language)
                     • Example sentence in the source language’s native script
                 {{
-                "word": "<original input word>",
-                "romanized": "<romanized form of input word>",
-                "phonetic_spelling": "<simplified pronunciation using familiar English letters and stress marks (e.g., huh-LOH, HEE-loh, sah-lahm), avoiding IPA symbols>"
-                "translations": "<a list of at least three translation candidates if possible>",
-                "parts_of_speech": [
-                        {{
-                        "part_of_speech": "<part of speech in english>",
-                        "definition": "<definition of the word in the **target** language>",
-                        "example": "<example sentence in the source language's script>",
-                        }}
-                    ]
+                    "word": "<original input word>",
+                    "romanized": "<romanized form of input word>",
+                    "phonetic_spelling": "<simplified pronunciation using familiar English letters and stress marks (e.g., huh-LOH, HEE-loh, sah-lahm), avoiding IPA symbols>"
+                    "translations": [
+                        "<candidate 1>",
+                        "<candidate 2>",
+                        "<candidate 3>"
+                    ],
+                    "parts_of_speech": [
+                            {{
+                                "part_of_speech": "<part of speech in english>",
+                                "definition": "<definition of the word in the **target** language>",
+                                "example": "<example sentence in the source language's script>",
+                            }}
+                        ]
                 }}
 
                 Input word: {params["text"]}
@@ -99,7 +103,7 @@ class AIPromptService:
                 {params["snippets"]}
                 """
 
-    def generate_ai_dictionary_pos_prompt(self, params: dict) -> str:
+    def generate_ai_word_pos_prompt(self, params: dict) -> str:
         return f"""
                 You are a dictionary assistant. 
                 Given a word, a source language, and a target language, produce a JSON response according to the rules below.
@@ -113,9 +117,9 @@ class AIPromptService:
 
                 "parts_of_speech": [
                         {{
-                        "part_of_speech": "<part of speech in english>",
-                        "definition": "<definition of the word in the **target** language>",
-                        "example": "<example sentence in the source language's script>",
+                            "part_of_speech": "<part of speech in english>",
+                            "definition": "<definition of the word in the **target** language>",
+                            "example": "<example sentence in the source language's script>",
                         }}
                     ]
                 }}

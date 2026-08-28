@@ -89,12 +89,12 @@ class VideoService:
             "code": transcript_data.language_code, 
             "name": transcript_data.language
         })
-        language = await self.language_store.get_lang_by_id(language_id)
 
         await self.video_store.update_video(video, {"language_id": language_id})
 
-        new_snippets = await self.snippet_store.add_snippets(transcript_data)
-        await self.transcript_snippet_store.add_ts_snippets(video.id, new_snippets, transcript_data)
+        new_snippet_texts = [item.text for item in transcript_data]
+        added_snippets = await self.snippet_store.add_snippets(new_snippet_texts, language_id)
+        await self.transcript_snippet_store.add_ts_snippets(video.id, added_snippets, transcript_data)
         await self.db.commit()
 
         return await self.transcript_snippet_store.get_ts_snippets_by_video_id(video.id, eager_load=True)

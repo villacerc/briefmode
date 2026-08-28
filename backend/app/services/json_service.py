@@ -6,10 +6,10 @@ from models import AIPromptType
 class JSONService():
     def get_validator_callback(self, prompt_type):
         match prompt_type:
-            case AIPromptType.DICTIONARY_ENTRY:
-                return self.validate_dictionary_entry_json
-            case AIPromptType.DICTIONARY_POS:
-                return self.validate_dictionary_pos_json
+            case AIPromptType.WORD_DICTIONARY:
+                return self.validate_word_dictionary_json
+            case AIPromptType.WORD_POS:
+                return self.validate_word_pos_json
             case AIPromptType.TEXT_INTERPRETATION:
                 return self.validate_interpretation_json
             case AIPromptType.SNIPPET_TRANSLATION:
@@ -19,7 +19,7 @@ class JSONService():
             case _:
                 raise ValueError(f"Unsupported prompt type for json validation: {prompt_type}")
   
-    def validate_dictionary_pos_json(self, data: dict) -> None:
+    def validate_word_pos_json(self, data: dict) -> None:
         """
         Validates the structure and content of the data part-of-speech entry JSON.
         Raises ValueError if something is invalid.
@@ -48,7 +48,7 @@ class JSONService():
                 if not isinstance(pos[key], str):
                     raise ValueError(f"parts_of_speech[{idx}]['{key}'] must be a string")
 
-    def validate_dictionary_entry_json(self, data: dict) -> None:
+    def validate_word_dictionary_json(self, data: dict) -> None:
         """
         Validates the structure and content of the data dictionary entry JSON.
         Raises ValueError if something is invalid.
@@ -86,7 +86,7 @@ class JSONService():
                 raise ValueError(f"translations[{i}] must be a string")
 
         # Validate "parts_of_speech"
-        self.validate_dictionary_pos_json(data)
+        self.validate_word_pos_json(data)
 
     def validate_interpretation_json(self, data: dict) -> None:
         """

@@ -1,10 +1,10 @@
-import { defineStore } from 'pinia';
-import type { VideoInfo } from '../types';
+import { defineStore } from "pinia";
+import type { VideoInfo } from "../types";
 
-export const useSettingsStore = defineStore('settings', {
+export const useSettingsStore = defineStore("settings", {
   state: () => ({
     videoInfo: null as VideoInfo | null,
-    targetLangCode: 'en',
+    targetLangCode: "en",
   }),
   actions: {
     setVideo(videoInfo: VideoInfo | null) {
@@ -12,6 +12,11 @@ export const useSettingsStore = defineStore('settings', {
     },
     setTargetLangCode(langCode: string) {
       this.targetLangCode = langCode;
+    },
+    setVideoSourceLangCode(langCode: string) {
+      if (this.videoInfo) {
+        this.videoInfo.source_lang_code = langCode;
+      }
     },
   },
 });
