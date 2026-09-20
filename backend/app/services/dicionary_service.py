@@ -45,7 +45,7 @@ class DictionaryService:
                     "data": data
                 }
             
-            interpretation = await self.ai_service.fetch_ai_data(AIPromptType.TEXT_INTERPRETATION, {"text": text})
+            interpretation = await self.ai_service.fetch_ai_data(AIPromptType.TEXT_INTERPRETATION, {}, {"text": text})
             if not interpretation["is_interpretable"]:
                 return {
                     "is_interpretable": False,
@@ -101,7 +101,7 @@ class DictionaryService:
 
     async def generate_dictionary_for_new_word(self, text: str, source_lang: Language, target_lang: Language):
         try:
-            ai_word_dictionary_data = await self.ai_service.fetch_ai_data(AIPromptType.WORD_DICTIONARY, {"text": text, "source_lang_name": source_lang.name, "target_lang_name": target_lang.name})
+            ai_word_dictionary_data = await self.ai_service.fetch_ai_data(AIPromptType.WORD_DICTIONARY, {"source_lang_name": source_lang.name, "target_lang_name": target_lang.name}, {"text": text})
             word_map = await self.word_store.save_ai_words_batch([ai_word_dictionary_data], source_lang.id)
             word_id = word_map[(sanitize_word(ai_word_dictionary_data["word"]), source_lang.id)]
             new_pos_snippets = [pos["example"] for pos in ai_word_dictionary_data["parts_of_speech"]]
