@@ -100,6 +100,7 @@ async def get_transcript(video_source_id: str, target_lang_code: str):
                 video = await VideoService(db).fetch_video(video_source_id)
             
             video_transcript_snippets = await VideoService(db).fetch_transcript_snippets(video)
+            video_transcript_snippets = video_transcript_snippets[:10]
             
         return StreamingResponse(
             stream_translations(video_transcript_snippets, target_lang_code),
@@ -133,7 +134,7 @@ async def stream_translations(ts_snippets: list[TranscriptSnippet], target_lang_
             source_lang = await LanguageStore(db).get_lang_by_id(ts_snippets[0].video.language_id)
             target_lang = await LanguageStore(db).get_lang_by_code(target_lang_code)
 
-        chunk_size = 5
+        chunk_size = 1
         for i in range(0, len(ts_snippets), chunk_size):
             transcript_chunk = ts_snippets[i:i+chunk_size]
             try:

@@ -127,19 +127,21 @@ class TranslationService:
         source_lang: Language,
         target_lang: Language,
     ):
-        ai_data = await self.ai_service.fetch_ai_data(
-            AIPromptType.SNIPPET_TRANSLATION,
-            {
-                "snippets": [
-                    {
-                        "snippet_id": snippet.id,
-                        "text": snippet.text,
-                    }
-                    for snippet in snippets
-                ],
-                "target_lang_name": target_lang.name,
-            },
-        )
+
+        ai_data = []
+
+        for snippet in snippets:
+            result = await self.ai_service.fetch_ai_data(
+                AIPromptType.SNIPPET_TRANSLATION,
+                {
+                    "target_lang_name": target_lang.name,
+                },
+                {
+                    "snippet_id": snippet.id,
+                    "text": snippet.text,
+                },
+            )
+            ai_data.append(result)
 
         await self.snippet_translation_store.add_ai_snippet_translations_batch(
             ai_data,

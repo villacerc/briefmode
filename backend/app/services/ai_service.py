@@ -1,6 +1,7 @@
 from .json_service import JSONService
 from .ai_prompt_service import AIPromptService
-from models import Language, AIPromptType
+from .ai_schema_service import AISchemaService
+from models import AIPromptType
 from openai import (
     AsyncOpenAI,
     RateLimitError,
@@ -12,6 +13,7 @@ import os
 import json
 import asyncio
 import random
+from typing import Any
 
 class AIService:
     def __init__(self):
@@ -19,34 +21,47 @@ class AIService:
         self.async_openai_client = AsyncOpenAI(api_key = os.getenv("OPENAI_API_KEY"))
         self.json_service = JSONService()
         self.ai_prompt_service = AIPromptService()
+        self.ai_schema_service = AISchemaService()
 
     async def fetch_ai_data(
         self,
         prompt_type: AIPromptType,
-        params: dict
+        prompt_prams: dict,
+        prompt_input: Any
     ) -> dict:
 
         max_retries = 5
 
-        prompt = self.ai_prompt_service.get_prompt(prompt_type, params)
-        validator = self.json_service.get_validator_callback(prompt_type)
+        prompt = self.ai_prompt_service.get_prompt(prompt_type, prompt_prams)
+        schema = self.ai_schema_service.get_schema(prompt_type)
 
         for attempt in range(max_retries):
             try:
                 response = await self.retry_with_backoff(
                     lambda: self.async_openai_client.responses.create(
-                        model=self.gpt_model,
-                        input=prompt,
-                        store=False
-                    )
+                                model="gpt-4.1-nano",
+                                instructions=prompt,
+                                input=[
+                                    {
+                                        "role": "user",
+                                        "content": [
+                                            {
+                                            "type": "input_text",
+                                            "text": json.dumps(prompt_input, ensure_ascii=False)
+                                            }
+                                        ]
+                                    }
+                                ],
+                                text=schema,
+                                reasoning={},
+                                stream=False,
+                                store=True,
+                                include=["web_search_call.action.sources"]
+                            )
                 )
 
-                raw_text = response.output[0].content[0].text.strip()
-
-                parsed_json = json.loads(raw_text)
-                validator(parsed_json)
-
-                return parsed_json
+                result = json.loads(response.output_text)
+                return result
 
             except (json.JSONDecodeError, ValueError) as e:
 

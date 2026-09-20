@@ -52,56 +52,39 @@ class AIPromptService:
                 """
                 
     def generate_ai_snippet_translation_prompt(self, params: dict) -> str:
+        target_lang_name = params["target_lang_name"],
         return f"""
-               Translate the following transcript snippets into {params["target_lang_name"]}.
+            Translate the following transcript snippet into {target_lang_name} and provide a word-level language-learning analysis.
 
-                The input is a JSON array of transcript snippets.
+            The input contains:
 
-                Rules:
-                1. Respond ONLY with valid JSON. Do NOT include explanations, markdown, comments, or extra text.
-                2. Return a JSON array.
-                3. The output array MUST contain EXACTLY the same number of objects as the input array.
-                4. Preserve the input order exactly.
-                5. Each output object MUST contain the same "id" as its corresponding input object.
-                6. Do NOT merge, split, reorder, or omit snippets.
-                7. Transcript snippets may begin or end in the middle of a sentence. Translate EACH snippet independently exactly as provided. Do NOT combine adjacent snippets into complete sentences.
-                8. If a snippet is already in {params["target_lang_name"]}, keep its translation identical to the original text.
-                9. Capitalize the first word only if required by grammar.
-                10. Break each snippet into individual word tokens:
-                    - "word": original word with punctuation intact.
-                    - "part_of_speech": only the main POS label (e.g. "verb").
-                    - "romanized": Latin script only.
-                    - "phonetic_spelling": simplified English pronunciation (not IPA).
-                    - "translations": at least three translation candidates when possible.
-                11. "romanized" must never contain non-Latin characters.
-                12. Return properly formatted JSON using double quotes and no trailing commas.
+            * `snippet_id`: the unique identifier of the snippet
+            * `text`: the original transcript text
 
-                Output format:
-                [
-                    {{
-                        "snippet_id": <same input id>,
-                        "snippet_text": "<original input text>",
-                        "translation": "<translated snippet>",
-                        "word_parts": [
-                            {{
-                                "word": "<original word>",
-                                "part_of_speech": "<part of speech>",
-                                "romanized": "<romanized form>",
-                                "phonetic_spelling": "<simplified pronunciation>",
-                                "translations": [
-                                    "<candidate 1>",
-                                    "<candidate 2>",
-                                    "<candidate 3>"
-                                ]
-                            }}
-                        ]
-                    }}
-                ]
+            Rules:
 
-                Input:
+            1. Preserve `snippet_id` exactly.
+            2. Set `snippet_text` to the original `text` exactly as provided. Do not modify, correct, normalize, or translate it.
+            3. Translate the entire snippet into {target_lang_name}.
 
-                {params["snippets"]}
-                """
+            * Translate only the text contained in this snippet.
+            * The snippet may begin or end in the middle of a sentence. Do not add missing context.
+            * If the snippet is already in {target_lang_name}, keep the translation identical to the original text.
+            4. Populate `word_parts` with individual words or meaningful expressions useful for language learning.
+
+            * Each `word` must appear in the original `snippet_text`.
+            * Include useful grammatical words such as particles.
+            * Do not invent words or expressions.
+            5. For each `word_parts` entry:
+
+            * `word`: original word or expression exactly as it appears.
+            * `part_of_speech`: primary grammatical category.
+            * `romanized`: Latin-script romanization using the standard system for the source language.
+            * `phonetic_spelling`: simplified English pronunciation guide. Do not use IPA.
+            * `translations`: up to three {target_lang_name} meanings appropriate to the context.
+            6. `romanized` must contain Latin characters only.
+            7. Return only the JSON structure defined by the provided schema. Do not provide explanations or additional fields.
+            """
 
     def generate_ai_word_pos_prompt(self, params: dict) -> str:
         return f"""
