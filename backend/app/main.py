@@ -100,7 +100,6 @@ async def get_transcript(video_source_id: str, target_lang_code: str):
                 video = await VideoService(db).fetch_video(video_source_id)
             
             video_transcript_snippets = await VideoService(db).fetch_transcript_snippets(video)
-            video_transcript_snippets = video_transcript_snippets[:3]
             
         return StreamingResponse(
             stream_translations(video_transcript_snippets, target_lang_code),
