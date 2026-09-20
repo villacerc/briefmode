@@ -91,7 +91,7 @@ class DictionaryService:
                     await self.translation_service.generate_snippet_translations_and_word_translations_for_existing_snippet_words([pos_snippet.snippet for pos_snippet in word_pos_snippets], target_lang)
             else:
                 # fetch POS from AI and save
-                ai_word_dictionary_data = await self.ai_service.fetch_ai_data(AIPromptType.WORD_POS, {"text": word.text, "source_lang_name": source_lang.name, "target_lang_name": target_lang.name})
+                ai_word_dictionary_data = await self.ai_service.fetch_ai_data(AIPromptType.WORD_POS, {"source_lang_name": source_lang.name, "target_lang_name": target_lang.name}, {"text": word.text})
                 new_pos_snippets = [pos["example"] for pos in ai_word_dictionary_data["parts_of_speech"]]
                 added_pos_snippets = await self.snippet_store.add_snippets(new_pos_snippets, source_lang.id)
                 await self.translation_service.generate_snippet_translations_and_word_translations(added_pos_snippets, source_lang, target_lang)

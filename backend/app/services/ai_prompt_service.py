@@ -84,30 +84,22 @@ class AIPromptService:
         """
 
     def generate_ai_word_pos_prompt(self, params: dict) -> str:
+        source_lang_name = params["source_lang_name"]
+        target_lang_name = params["target_lang_name"]
         return f"""
-                You are a dictionary assistant. 
-                Given a word, a source language, and a target language, produce a JSON response according to the rules below.
+            You are a dictionary assistant. 
+            Given a text, produce a JSON response according to the rules below.
 
-                Rules
-                1. Parts of speech: Provide up to 4 unique parts of speech of the input word if available. Each must include:
-                    • Part of speech (in English)
-                    • Definition (in the target language)
-                    • Example sentence in the source language’s native script
-                {{
+            The input contains:
 
-                "parts_of_speech": [
-                        {{
-                            "part_of_speech": "<part of speech in english>",
-                            "definition": "<definition of the word in the **target** language>",
-                            "example": "<example sentence in the source language's script>",
-                        }}
-                    ]
-                }}
+            * `text`: the text of the word
 
-                Input word: {params["text"]}
-                Source language: {params["source_lang_name"]}
-                Target language: {params["target_lang_name"]}
-                """
+            Rules
+            1. Parts of speech: Provide up to 4 unique parts of speech of the input word if available. Each must include:
+                • Part of speech (in English)
+                • Definition (in {target_lang_name})
+                • Example sentence in {source_lang_name} native script
+        """
     
     def generate_ai_text_interpretation_prompt(self) -> str:
         return f"""

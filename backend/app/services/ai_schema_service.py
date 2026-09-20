@@ -3,8 +3,10 @@ from models import AIPromptType
 class AISchemaService:
     def get_schema(self, prompt_type: AIPromptType) -> dict:
         match prompt_type:
+            case AIPromptType.WORD_POS:
+                return self.generate_ai_word_pos_schema()
             case AIPromptType.TEXT_INTERPRETATION:
-                return self.generate_text_interpretation_prompt_schema()
+                return self.generate_ai_text_interpretation_prompt_schema()
             case AIPromptType.WORD_DICTIONARY:
                 return self.generate_ai_word_dictionary_prompt_schema()
             case AIPromptType.SNIPPET_WORDS_TRANSLATION:
@@ -13,8 +15,49 @@ class AISchemaService:
                 return self.generate_ai_snippet_translation_schema()
             case _:
                 raise ValueError(f"Unsupported prompt type: {prompt_type}")
+
+    def generate_ai_word_pos_schema(self) -> dict:
+        return {
+            "format": {
+                "type": "json_schema",
+                "name": "word_pos",
+                "strict": True,
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "parts_of_speech": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "part_of_speech": {
+                                        "type": "string"
+                                    },
+                                    "definition": {
+                                        "type": "string"
+                                    },
+                                    "example": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "part_of_speech",
+                                    "definition",
+                                    "example"
+                                ],
+                                "additionalProperties": False
+                            }
+                        }
+                    },
+                    "required": [
+                        "parts_of_speech"
+                    ],
+                    "additionalProperties": False
+                }
+            }
+        }
             
-    def generate_text_interpretation_prompt_schema(self) -> dict:
+    def generate_ai_text_interpretation_prompt_schema(self) -> dict:
         return {
             "format": {
                 "type": "json_schema",
