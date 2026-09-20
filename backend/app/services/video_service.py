@@ -12,21 +12,23 @@ load_dotenv()
 
 class VideoService:
     def __init__(self, db):
-        proxy_username = os.getenv("PROXY_USERNAME")
-        proxy_password = os.getenv("PROXY_PASSWORD")
-
         self.db = db
         self.video_store = VideoStore(db)
         self.snippet_store = SnippetStore(db)
         self.transcript_snippet_store = TranscriptSnippetStore(db)
         self.language_store = LanguageStore(db)
-        self.ytt_api = YouTubeTranscriptApi()
-        # self.ytt_api = YouTubeTranscriptApi(
-        #     proxy_config=GenericProxyConfig(
-        #         http_url=f"http://{proxy_username}:{proxy_password}@p.webshare.io:80",
-        #         https_url=f"http://{proxy_username}:{proxy_password}@p.webshare.io:80",
-        #     )
-        # )
+        if os.getenv("ENVIRONMENT") == "prod":
+                proxy_username = os.getenv("PROXY_USERNAME")
+                proxy_password = os.getenv("PROXY_PASSWORD")
+
+                self.ytt_api = YouTubeTranscriptApi(
+                    proxy_config=GenericProxyConfig(
+                        http_url=f"http://{proxy_username}:{proxy_password}@p.webshare.io:80",
+                        https_url=f"http://{proxy_username}:{proxy_password}@p.webshare.io:80",
+                    )
+                )
+        else:
+            self.ytt_api = YouTubeTranscriptApi()
         self.google_api_key = os.getenv("GOOGLE_YT_DATA_API_KEY")
         self.ytt_api_url = "https://www.googleapis.com/youtube/v3/videos"
     
