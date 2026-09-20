@@ -52,7 +52,7 @@ class AIPromptService:
                 """
                 
     def generate_ai_snippet_translation_prompt(self, params: dict) -> str:
-        target_lang_name = params["target_lang_name"],
+        target_lang_name = params["target_lang_name"]
         return f"""
             Translate the following transcript snippet into {target_lang_name} and provide a word-level language-learning analysis.
 
@@ -136,48 +136,33 @@ class AIPromptService:
                 """
     
     def generate_ai_snippet_words_translation_prompt(self, params: dict) -> str:
+        target_lang_name = params["target_lang_name"]
         return f"""
-                Translate the words from the following transcript snippets into
-                {params["target_lang_name"]}.
+                Translate the following transcript snippet into {target_lang_name} and provide a word-level language-learning analysis.
 
-                The input is a JSON array of snippet words.
+                The input contains:
+
+                * `snippet_id`: the unique identifier of the snippet
+                * `snippet_text`: the original transcript text
+                * `snippet_words`: the pre-segmented words in the snippet, each containing `word_id` and `text`
 
                 Rules:
-                1. Respond ONLY with valid JSON. Do NOT include explanations, comments,
-                markdown, or extra text.
-                2. Return a JSON array.
-                3. Return exactly one output object for each snippet id.
-                4. Preserve the input order exactly.
-                5. Do not add, remove, merge, split, or reorder snippet words.
-                6. Each output object must contain:
-                - "snippet_id": provided id of the snippet
-                - "translation": the translated snippet text
-                - "word_parts": list of word objects
-                7. Each word_part object must contain
-                - "word_id": provided id of the word
-                - "translations": list of translation candidates
-                8. Provide at least three translation candidates for each word when possible.
-                9. If a word has no reasonable translation, return an empty list.
-                10. Return properly formatted JSON using double quotes and no trailing commas.
 
-                Output format:
-                [
-                    {{
-                        "snippet_id": <same input snippet id>,
-                        "translation": "<translated snippet text>",
-                        "word_parts": [
-                            {{
-                                "word_id": <same input word id>,
-                                "translations": [
-                                    "<candidate 1>",
-                                    "<candidate 2>",
-                                    "<candidate 3>"
-                                ]
-                            }}
-                        ]
-                    }}
-                ]
+                1. Preserve `snippet_id` exactly.
+                2. Translate `snippet_text` into {target_lang_name}.
+                3. Use the provided `snippet_words` exactly as the source for word-level analysis.
 
-                Input:
-                {params["snippets"]}
+                * Do not split, combine, add, remove, or reorder the provided words.
+                * Preserve every `word_id` exactly.
+                * Every provided word must have a corresponding `word_parts` entry.
+                4. For each `word_parts` entry:
+
+                * Preserve the corresponding `word_id`.
+                * Provide up to three `{target_lang_name}` translations appropriate to the word's context.
+                * Use the surrounding snippet context to determine the most appropriate meanings.
+                5. Translate only the text contained in this snippet.
+
+                * The snippet may begin or end in the middle of a sentence. Do not add missing context.
+                * If the snippet is already in {target_lang_name}, keep the translation identical to the original text.
+                6. Return only the JSON structure defined by the provided schema. Do not provide explanations or additional fields.
                 """
