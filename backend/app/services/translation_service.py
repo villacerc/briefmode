@@ -26,17 +26,17 @@ class TranslationService:
     ):
         snippet_ids = [snippet.snippet_id for snippet in ts_snippets]
 
-        existing_translations = (
+        existing_snippet_translations = (
             await self.snippet_translation_store.get_snippet_translations_by_lang(
                 snippet_ids,
                 target_lang.id,
             )
         )
 
-        if existing_translations:
+        if existing_snippet_translations and len(existing_snippet_translations) == len(ts_snippets):
             return await self.get_normalized_ts_translated_snippets(
                 ts_snippets,
-                existing_translations,
+                existing_snippet_translations,
                 source_lang,
                 target_lang,
             )
